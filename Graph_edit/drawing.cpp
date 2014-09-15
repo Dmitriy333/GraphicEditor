@@ -42,12 +42,12 @@ void Drawing::useRubber(HWND &hWnd,
 				HDC &currentDc, HDC &bufferDc, 
 				draw &drawMode, 
 				HBRUSH &oldBrush, 
-				INT width, COLORREF color)
+				INT penWidth, INT rubberWidth, COLORREF color)
 {
 	RECT rect;
 	HPEN pen;
 
-	pen = CreatePen(PS_SOLID, width, RGB(255, 255, 255));
+	pen = CreatePen(PS_SOLID, rubberWidth, RGB(255, 255, 255));
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
 
@@ -61,11 +61,11 @@ void Drawing::useRubber(HWND &hWnd,
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
 
-	rubber->ellipse(currentDc, x, y, width);
+	rubber->ellipse(currentDc, x, y, rubberWidth);
 	drawMode = CURRENT;
 	InvalidateRect(hWnd, NULL, FALSE);
 
-	pen = CreatePen(PS_SOLID, width, RGB(0, 0, 0));
+	pen = CreatePen(PS_SOLID, penWidth, RGB(0, 0, 0));
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
 }

@@ -57,8 +57,6 @@ void CustomRubber::ellipse(HDC &dc, int x, int y, int width)
 	Ellipse(dc, x - side, y - side, x + side, y + side);
 }
 
-
-
 // Rectangle
 CustomRectangle::CustomRectangle(int newX, int newY) : CustomShape(newX, newY){}
 

@@ -19,6 +19,7 @@ namespace Drawing
 		HDC &bufferDc,  
 		draw &drawMode, 
 		HBRUSH &oldBrush,
-		int width,
+		int penWidth,
+		int rubberWidth,
 		COLORREF);
 }

@@ -76,6 +76,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static HBRUSH brush;
 	static COLORREF penColor;
 	static INT penWidth;
+	static INT rubberWidth = 10;
 	static draw drawMode;
 	static CustomShape* shape;
 	static CustomRubber* rubber;
@@ -106,7 +107,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_RBUTTONDOWN:
 		rubber = new CustomRubber((short)LOWORD(lParam), (short)HIWORD(lParam));
-		useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, penColor);
+		useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
 		SetCapture(hWnd);
 		break;
 
@@ -123,12 +124,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				GetClientRect(hWnd, &rect);
 				BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 				shape->draw(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
-				drawMode = BUFFER;
+				drawMode = CURRENT;
 			}
 		}
 		else if (wParam & MK_RBUTTON)
 		{
-			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, penColor);
+			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
 		break;
@@ -171,15 +172,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_MOUSEWHEEL:
 		HPEN pen;
-		penWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
-		if (penWidth < 0)
-			penWidth = 0;
-		pen = CreatePen(PS_SOLID, penWidth, penColor);
-		DeleteObject(SelectObject(currentDc, pen));
-		DeleteObject(SelectObject(bufferDc, pen));
 		if (wParam & MK_RBUTTON)
 		{
-			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, penColor);
+			rubberWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
+			if (penWidth < 0)
+				penWidth = 0;
+			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
+		}
+		else 
+		{
+			penWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
+			if (penWidth < 0)
+				penWidth = 0;
+			pen = CreatePen(PS_SOLID, penWidth, penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
 		}
 		break;
 
