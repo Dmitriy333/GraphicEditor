@@ -157,6 +157,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (isPencil)
 		{
 			shape = new CustomPencil((short)LOWORD(lParam), (short)HIWORD(lParam));
+			shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
 			drawMode = BUFFER;
 		}
 		else
@@ -215,6 +216,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_MOUSEMOVE:
+		GetClientRect(hWnd, &rect);
+		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		if (wParam & MK_LBUTTON)
 		{
 			if (shape)
@@ -238,7 +241,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
-
 		break;
 
 	case WM_LBUTTONUP:
@@ -320,6 +322,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			pen = CreatePen(PS_SOLID, penWidth, penColor);
 			DeleteObject(SelectObject(currentDc, pen));
 			DeleteObject(SelectObject(bufferDc, pen));
+			GetClientRect(hWnd, &rect);
+			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			MoveToEx(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam), NULL);
+			LineTo(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
+			drawMode = CURRENT;
+			InvalidateRect(hWnd, NULL, FALSE); 
 		}
 		break;
 
