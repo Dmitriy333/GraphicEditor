@@ -38,26 +38,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		800, 600,
+		1920, 1080,
 		NULL,
 		NULL,
 		hInstance,
 		NULL
 		);
-
-	//Buttons for choose tools and functions
-	//Pen
-	//HWND btnPen = CreateWindow(L"button", L"Pen", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 10, 80, 20, hWnd, (HMENU)10000, hInstance, NULL);
-	//Line
-	//HWND btnLine = CreateWindow(L"button", L"Line", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 30, 80, 20, hWnd, (HMENU)10001, hInstance, NULL);
-	//Polygone
-	//HWND btnPolyGone = CreateWindow(L"button", L"PolyGone", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 90, 80, 20, hWnd, (HMENU)10004, hInstance, NULL);
-	//Polyline
-	//HWND btnPolyLine = CreateWindow(L"button", L"PolyLine", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 110, 80, 20, hWnd, (HMENU)10005, hInstance, NULL);
-	//Rectangle
-	//HWND btnRectangle = CreateWindow(L"button", L"Rectangle", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 50, 80, 20, hWnd, (HMENU)10002, hInstance, NULL);
-	//Ellipse
-	//HWND btnEllipse = CreateWindow(L"button", L"Ellipse", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 70, 80, 20, hWnd, (HMENU)10003, hInstance, NULL);
 
 	if (!hWnd)
 	{
@@ -69,7 +55,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		return 1;
 	}
 
-	ShowWindow(hWnd, nCmdShow);
+	ShowWindow(hWnd, SW_MAXIMIZE);
 	UpdateWindow(hWnd);
 
 	MSG msg;
@@ -105,31 +91,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-		case 40001:
+		case ID_TOOLS_PEN:
 		{
 			isPencil = TRUE;
 			ToolId = 0;
 			break;
 		}
-		case 40002:
+		case ID_TOOLS_LINE:
 		{
 			isPencil = FALSE;
 			ToolId = 1;
 			break;
 		}
-		case 40005:
+		case ID_TOOLS_RECTANGLE:
 		{
 			isPencil = FALSE;
 			ToolId = 2;
 			break;
 		}
-		case 40007:
+		case ID_TOOLS_ELLIPSE:
 		{
 			isPencil = FALSE;
 			ToolId = 3;
 			break;
 		}
-		case 40004:
+		case ID_TOOLS_POLYGONE:
 		{
 			isPencil = FALSE;
 			isPolyLine = FALSE;
@@ -138,7 +124,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			ToolId = 4;
 			break;
 		}
-		case 40003:
+		case ID_TOOLS_POLYLINE:
 		{
 			isPencil = FALSE;
 			isPolyLine = TRUE;
@@ -147,6 +133,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			ToolId = 5;
 			break;
 		}
+		case ID_FILE_NEW:
+			initializeDcs(hWnd, mainDc, currentDc, currentBitmap, bufferDc, bufferBitmap);
+			break;
 		}
 		break;
 	case WM_CREATE:
