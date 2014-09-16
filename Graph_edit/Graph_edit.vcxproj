@@ -87,6 +87,10 @@
     <ClInclude Include="figures.h" />
     <ClInclude Include="graph_edit.h" />
     <ClInclude Include="custom_shapes.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Graph_edit.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
