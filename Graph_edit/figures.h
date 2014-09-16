@@ -2,4 +2,4 @@
 
 #include "custom_shapes.h"
 
-enum draw { CURRENT, BUFFER, PEN };
+enum draw { CURRENT, BUFFER, BACKUP };
