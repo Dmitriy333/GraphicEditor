@@ -80,7 +80,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static INT rubberWidth = 10;
 	static draw drawMode;
 	static CustomShape* shape;
-	static CustomRubber* rubber;
+	static CustomRubber* rubber = NULL;
 	static BOOL isPencil = TRUE;
 	static Tools ToolId = PEN;
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1; //Using for polyline and polygone
@@ -256,7 +256,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else if (wParam & MK_RBUTTON)
 		{
-			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
+			if (rubber)
+			{
+				useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
+			}
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
 		break;
@@ -307,7 +310,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		ReleaseCapture();
 		GetClientRect(hWnd, &rect);
 		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-		delete rubber;
+		if (rubber)
+		{
+			delete rubber;
+			rubber = NULL;
+		}
 		break;
 
 	case WM_PAINT:
