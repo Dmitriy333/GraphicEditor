@@ -9,7 +9,9 @@ namespace Drawing
 		HDC &currentDc,
 		HBITMAP &currentBitmap,
 		HDC &bufferDc,
-		HBITMAP &bufferBitmap);
+		HBITMAP &bufferBitmap,
+		HDC& backupDc,
+		HBITMAP& backupBitmap);
 
 	void useRubber(HWND &hWnd, 
 		CustomRubber *rubber, 

@@ -1,5 +1,6 @@
 #include "graph_edit.h"
-#include "resource.h"
+
+enum Tools { PEN, LINE, RECTANGLE, ELLIPSE, POLY, TEXT };
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -38,26 +39,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		800, 600,
+		1920, 1080,
 		NULL,
 		NULL,
 		hInstance,
 		NULL
 		);
-
-	//Buttons for choose tools and functions
-	//Pen
-	//HWND btnPen = CreateWindow(L"button", L"Pen", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 10, 80, 20, hWnd, (HMENU)10000, hInstance, NULL);
-	//Line
-	//HWND btnLine = CreateWindow(L"button", L"Line", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 30, 80, 20, hWnd, (HMENU)10001, hInstance, NULL);
-	//Polygone
-	//HWND btnPolyGone = CreateWindow(L"button", L"PolyGone", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 90, 80, 20, hWnd, (HMENU)10004, hInstance, NULL);
-	//Polyline
-	//HWND btnPolyLine = CreateWindow(L"button", L"PolyLine", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 110, 80, 20, hWnd, (HMENU)10005, hInstance, NULL);
-	//Rectangle
-	//HWND btnRectangle = CreateWindow(L"button", L"Rectangle", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 50, 80, 20, hWnd, (HMENU)10002, hInstance, NULL);
-	//Ellipse
-	//HWND btnEllipse = CreateWindow(L"button", L"Ellipse", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 10, 70, 80, 20, hWnd, (HMENU)10003, hInstance, NULL);
 
 	if (!hWnd)
 	{
@@ -65,11 +52,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			_T("Call to CreateWindow failed!"),
 			_T("Win32 Guided Tour"),
 			NULL);
-
 		return 1;
 	}
 
-	ShowWindow(hWnd, nCmdShow);
+	ShowWindow(hWnd, SW_MAXIMIZE);
 	UpdateWindow(hWnd);
 
 	MSG msg;
@@ -86,8 +72,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
 	RECT rect;
-	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0;
-	static HBITMAP currentBitmap, bufferBitmap;
+	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0, backupDc = 0;
+	static HBITMAP currentBitmap, bufferBitmap, backupBitmap;
 	static HBRUSH brush;
 	static COLORREF penColor;
 	static INT penWidth;
@@ -96,112 +82,143 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static CustomShape* shape;
 	static CustomRubber* rubber;
 	static BOOL isPencil = TRUE;
-	static INT ToolId = 0; //Identificator of tool: 0 - pen, 1 - line, 2 - rectangle, 3 - ellipse, 4 - polyline, 5 - polygone
+	static Tools ToolId = PEN;
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1; //Using for polyline and polygone
 	static BOOL isPolyLine; //Use for identification: polyline or polygone
+	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+	static string text;
 
 	switch (message)
 	{
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-		case 40001:
-		{
+		case ID_TOOLS_PEN:
 			isPencil = TRUE;
-			ToolId = 0;
+			ToolId = PEN;
 			break;
-		}
-		case 40002:
-		{
+
+		case ID_TOOLS_LINE:
 			isPencil = FALSE;
-			ToolId = 1;
+			ToolId = LINE;
 			break;
-		}
-		case 40005:
-		{
+
+		case ID_TOOLS_RECTANGLE:
 			isPencil = FALSE;
-			ToolId = 2;
+			ToolId = RECTANGLE;
 			break;
-		}
-		case 40007:
-		{
+
+		case ID_TOOLS_ELLIPSE:
 			isPencil = FALSE;
-			ToolId = 3;
+			ToolId = ELLIPSE;
 			break;
-		}
-		case 40004:
-		{
+
+		case ID_TOOLS_POLYGONE:
 			isPencil = FALSE;
 			isPolyLine = FALSE;
 			prevX = -1;
 			prevY = -1;
-			ToolId = 4;
+			ToolId = POLY;
 			break;
-		}
-		case 40003:
-		{
+
+		case ID_TOOLS_POLYLINE:
 			isPencil = FALSE;
 			isPolyLine = TRUE;
 			prevX = -1;
 			prevY = -1;
-			ToolId = 5;
+			ToolId = POLY;
 			break;
-		}
+
+		case ID_FILE_NEW:
+			initializeDcs(hWnd, mainDc, currentDc, currentBitmap, bufferDc, bufferBitmap, backupDc, backupBitmap);
+			break;
+
+		case ID_TOOLS_TEXT:
+			isPencil = FALSE;
+			ToolId = TEXT;
+			break;
+
+		case ID_FILE_CANCEL:
+			drawMode = BACKUP;
+			InvalidateRect(hWnd, NULL, FALSE);
+			break;
+
+		case ID_SETTINGS_COLOR:
+			CHOOSECOLOR cc;
+			HBRUSH hbrush;
+			static COLORREF acrCustClr[16];
+			static DWORD rgbCurrent;
+
+			ZeroMemory(&cc, sizeof(CHOOSECOLOR));
+			cc.lStructSize = sizeof(CHOOSECOLOR);
+			cc.hwndOwner = hWnd;
+			cc.lpCustColors = (LPDWORD)acrCustClr;
+			cc.rgbResult = rgbCurrent;
+			cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+			if (ChooseColor(&cc) == TRUE)
+			{
+				hbrush = CreateSolidBrush(cc.rgbResult);
+				rgbCurrent = cc.rgbResult;
+				penColor = rgbCurrent;
+				
+				HPEN pen;
+				pen = CreatePen(PS_SOLID, penWidth, penColor);
+				DeleteObject(SelectObject(currentDc, pen));
+				DeleteObject(SelectObject(bufferDc, pen));
+			}
+			break;
+
+		case ID_SETTINGS_RUBBERCOLOR:
+			//Установка фонового цвета (ствет стерки)
+			break;
 		}
 		break;
 	case WM_CREATE:
-		initializeDcs(hWnd, mainDc, currentDc, currentBitmap, bufferDc, bufferBitmap);
+		initializeDcs(hWnd, mainDc, currentDc, currentBitmap, bufferDc, bufferBitmap, backupDc, backupBitmap);
 		break;
 
 	case WM_LBUTTONDOWN:
 		if (isPencil)
 		{
+			GetClientRect(hWnd, &rect);
 			shape = new CustomPencil((short)LOWORD(lParam), (short)HIWORD(lParam));
+			BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
 			drawMode = BUFFER;
 		}
 		else
 		{
 			switch (ToolId)
 			{
-			case 1:
-			{
+			case LINE:
 				shape = new CustomLine((short)LOWORD(lParam), (short)HIWORD(lParam));
 				break;
-			}
-			case 2:
-			{
+
+			case RECTANGLE:
 				shape = new CustomRectangle((short)LOWORD(lParam), (short)HIWORD(lParam));
 				break;
-			}
-			case 3:
-			{
+
+			case ELLIPSE:
 				shape = new CustomEllipse((short)LOWORD(lParam), (short)HIWORD(lParam));
 				break;
-			}
-			case 4: //Polygone
-			{
+
+			case POLY:
 				if (prevX == -1 && prevY == -1)
 				{
-					prevX = (int)LOWORD(lParam);
-					prevY = (int)HIWORD(lParam);
+					prevX = (short)LOWORD(lParam);
+					prevY = (short)HIWORD(lParam);
 					startX = prevX;
 					startY = prevY;
 				}
 				shape = new CustomLine(prevX, prevY);
 				break;
-			}
-			case 5: //Polyline
-			{
-				if (prevX == -1 && prevY == -1)
-				{
-					prevX = (int)LOWORD(lParam);
-					prevY = (int)HIWORD(lParam);
-					startX = prevX;
-					startY = prevY;
-				}
-				shape = new CustomLine(prevX, prevY);
+
+			case TEXT:
+				prevX = (short)LOWORD(lParam);
+				prevY = (short)HIWORD(lParam);
+				text = ' ';
 				break;
-			}
 			}
 			drawMode = CURRENT;
 		}
@@ -209,12 +226,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_RBUTTONDOWN:
+		GetClientRect(hWnd, &rect);
 		rubber = new CustomRubber((short)LOWORD(lParam), (short)HIWORD(lParam));
+		BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
 		SetCapture(hWnd);
 		break;
 
 	case WM_MOUSEMOVE:
+		GetClientRect(hWnd, &rect);
+		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		if (wParam & MK_LBUTTON)
 		{
 			if (shape)
@@ -238,7 +259,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
-
 		break;
 
 	case WM_LBUTTONUP:
@@ -251,6 +271,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				prevY = (int)HIWORD(lParam);
 			}
 			GetClientRect(hWnd, &rect);
+			BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
 
 			drawMode = BUFFER;
@@ -259,35 +280,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		delete shape;
 		shape = NULL;
 		break;
+
 	case WM_LBUTTONDBLCLK:
-		shape = new CustomLine(prevX, prevY);
-		ReleaseCapture();
-		if (!isPencil)
+		if (ToolId == 4)
 		{
+			shape = new CustomLine(prevX, prevY);
+			ReleaseCapture();
 			GetClientRect(hWnd, &rect);
+			BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			if (!isPolyLine)
 				shape->draw(bufferDc, startX, startY);
 			else
 				shape->draw(bufferDc, prevX, prevY);
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
-		}
-		if (ToolId == 4 || ToolId == 5)
-		{
 			prevX = -1;
 			prevY = -1;
 			startX = -1;
 			startY = -1;
+			delete shape;
+			shape = NULL;
 		}
-		delete shape;
-		shape = NULL;
 		break;
+
 	case WM_RBUTTONUP:
 		ReleaseCapture();
 		GetClientRect(hWnd, &rect);
 		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		delete rubber;
 		break;
+
 	case WM_PAINT:
 		paintDc = BeginPaint(hWnd, &ps);
 		GetClientRect(hWnd, &rect);
@@ -296,7 +318,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case CURRENT:
 			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
 			break;
+
 		case BUFFER:
+			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			break;
+
+		case BACKUP:
+			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, backupDc, 0, 0, SRCCOPY);
 			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			break;
 		}
@@ -310,6 +338,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			rubberWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
 			if (penWidth < 0)
 				penWidth = 0;
+			GetClientRect(hWnd, &rect);
+			BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
 		}
 		else
@@ -320,6 +350,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			pen = CreatePen(PS_SOLID, penWidth, penColor);
 			DeleteObject(SelectObject(currentDc, pen));
 			DeleteObject(SelectObject(bufferDc, pen));
+			GetClientRect(hWnd, &rect);
+			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			MoveToEx(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam), NULL);
+			LineTo(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
+			drawMode = CURRENT;
+			InvalidateRect(hWnd, NULL, FALSE); 
+		}
+		break;
+
+	case WM_CHAR:
+		if (ToolId == 5)
+		{
+			GetClientRect(hWnd, &rect);
+			char c = char(wParam);
+			text += c;
+			TextOut(bufferDc, prevX, prevY, (LPCWSTR)text.c_str(), strlen(text.c_str()));
+			drawMode = BUFFER;
+			InvalidateRect(hWnd, NULL, FALSE);
 		}
 		break;
 

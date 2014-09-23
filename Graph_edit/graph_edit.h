@@ -5,8 +5,11 @@
 #include <time.h>     
 #include "figures.h"
 #include "drawing.h"
+#include "resource.h"
+#include <string>
 
 using namespace Drawing;
+using namespace std;
 
 static TCHAR szWindowClass[] = _T("Graphical Editor");
 

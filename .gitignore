@@ -1,4 +1,7 @@
 Debug/
 Graph_edit/Debug/
+Graph_edit/*.tmp
+Graph_edit/*.aps
 *.sdf
+*.opensdf
 *.v12.suo
