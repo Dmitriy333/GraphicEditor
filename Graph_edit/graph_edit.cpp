@@ -1,9 +1,6 @@
 #include "graph_edit.h"
-<<<<<<< HEAD
 
 enum Tools { PEN, LINE, RECTANGLE, ELLIPSE, POLY, TEXT };
-=======
->>>>>>> master
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -85,11 +82,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static CustomShape* shape;
 	static CustomRubber* rubber;
 	static BOOL isPencil = TRUE;
-<<<<<<< HEAD
 	static Tools ToolId = PEN;
-=======
-	static INT ToolId = 0; //Identificator of tool: 0 - pen, 1 - line, 2 - rectangle, 3 - ellipse, 4 - poly, 5 - text
->>>>>>> master
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1; //Using for polyline and polygone
 	static BOOL isPolyLine; //Use for identification: polyline or polygone
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -133,11 +126,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			isPolyLine = TRUE;
 			prevX = -1;
 			prevY = -1;
-<<<<<<< HEAD
 			ToolId = POLY;
-=======
-			ToolId = 4;
->>>>>>> master
 			break;
 
 		case ID_FILE_NEW:
@@ -146,7 +135,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		case ID_TOOLS_TEXT:
 			isPencil = FALSE;
-<<<<<<< HEAD
 			ToolId = TEXT;
 			break;
 
@@ -184,15 +172,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_SETTINGS_RUBBERCOLOR:
 			//Установка фонового цвета (ствет стерки)
 			break;
-=======
-			ToolId = 5;
-			break;
-
-		case ID_FILE_CANCEL:
-			drawMode = BACKUP;
-			InvalidateRect(hWnd, NULL, FALSE);
-			break;
->>>>>>> master
 		}
 		break;
 	case WM_CREATE:
@@ -212,7 +191,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			switch (ToolId)
 			{
-<<<<<<< HEAD
 			case LINE:
 				shape = new CustomLine((short)LOWORD(lParam), (short)HIWORD(lParam));
 				break;
@@ -226,21 +204,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 
 			case POLY:
-=======
-			case 1:
-				shape = new CustomLine((short)LOWORD(lParam), (short)HIWORD(lParam));
-				break;
-
-			case 2:
-				shape = new CustomRectangle((short)LOWORD(lParam), (short)HIWORD(lParam));
-				break;
-
-			case 3:
-				shape = new CustomEllipse((short)LOWORD(lParam), (short)HIWORD(lParam));
-				break;
-
-			case 4:
->>>>>>> master
 				if (prevX == -1 && prevY == -1)
 				{
 					prevX = (short)LOWORD(lParam);
@@ -251,11 +214,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				shape = new CustomLine(prevX, prevY);
 				break;
 
-<<<<<<< HEAD
 			case TEXT:
-=======
-			case 5:
->>>>>>> master
 				prevX = (short)LOWORD(lParam);
 				prevY = (short)HIWORD(lParam);
 				text = ' ';
