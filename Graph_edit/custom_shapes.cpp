@@ -1,6 +1,9 @@
 #include "custom_shapes.h"
 
 // Shape
+int CustomShape::penWidth = 1;
+COLORREF CustomShape::penColor = RGB(0,0,0);
+
 CustomShape::CustomShape(int newX, int newY) : x(newX), y(newY){}
 
 int CustomShape::getX()
@@ -44,6 +47,9 @@ void CustomPencil::draw(HDC &dc, int newX, int newY)
 
 
 //Rubber
+int CustomRubber::rubberWidth = 20;
+COLORREF CustomRubber::rubberColor = RGB(255, 255, 255);
+
 CustomRubber::CustomRubber(int newX, int newY) : CustomPencil(newX, newY){}
 
 void CustomRubber::draw(HDC &dc, int x, int y)

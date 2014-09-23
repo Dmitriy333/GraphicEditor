@@ -74,12 +74,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	RECT rect;
 	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0, backupDc = 0;
 	static HBITMAP currentBitmap, bufferBitmap, backupBitmap;
-	static HBRUSH brush;
-	static COLORREF penColor;
-	static INT penWidth;
-	static INT rubberWidth = 10;
 	static draw drawMode;
-	static CustomShape* shape;
+	static CustomShape* shape = NULL;
 	static CustomRubber* rubber = NULL;
 	static BOOL isPencil = TRUE;
 	static Tools ToolId = PEN;
@@ -87,6 +83,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static BOOL isPolyLine; //Use for identification: polyline or polygone
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 	static string text;
+	static POINT prevCoord;
+	CHOOSECOLOR cc;
+	COLORREF acrCustClr[16];
 
 	switch (message)
 	{
@@ -138,39 +137,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			ToolId = TEXT;
 			break;
 
-		case ID_FILE_CANCEL:
+		case ID_FILE_UNDO:
 			drawMode = BACKUP;
 			InvalidateRect(hWnd, NULL, FALSE);
 			break;
 
-		case ID_SETTINGS_COLOR:
-			CHOOSECOLOR cc;
-			HBRUSH hbrush;
-			static COLORREF acrCustClr[16];
-			static DWORD rgbCurrent;
+		case ID_FILE_EXIT:
+			exit(0);
 
+		case ID_SETTINGS_COLOR:
 			ZeroMemory(&cc, sizeof(CHOOSECOLOR));
 			cc.lStructSize = sizeof(CHOOSECOLOR);
 			cc.hwndOwner = hWnd;
 			cc.lpCustColors = (LPDWORD)acrCustClr;
-			cc.rgbResult = rgbCurrent;
 			cc.Flags = CC_FULLOPEN | CC_RGBINIT;
 
 			if (ChooseColor(&cc) == TRUE)
 			{
-				hbrush = CreateSolidBrush(cc.rgbResult);
-				rgbCurrent = cc.rgbResult;
-				penColor = rgbCurrent;
-				
 				HPEN pen;
-				pen = CreatePen(PS_SOLID, penWidth, penColor);
+				CustomShape::penColor = cc.rgbResult;
+				pen = CreatePen(PS_SOLID, CustomShape::penWidth, CustomShape::penColor);
 				DeleteObject(SelectObject(currentDc, pen));
 				DeleteObject(SelectObject(bufferDc, pen));
 			}
 			break;
 
 		case ID_SETTINGS_RUBBERCOLOR:
-			//Установка фонового цвета (ствет стерки)
+			ZeroMemory(&cc, sizeof(CHOOSECOLOR));
+			cc.lStructSize = sizeof(CHOOSECOLOR);
+			cc.hwndOwner = hWnd;
+			cc.lpCustColors = (LPDWORD)acrCustClr;
+			cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+			if (ChooseColor(&cc) == TRUE)
+			{
+				CustomRubber::rubberColor = cc.rgbResult;
+			}
 			break;
 		}
 		break;
@@ -229,11 +231,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rect);
 		rubber = new CustomRubber((short)LOWORD(lParam), (short)HIWORD(lParam));
 		BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-		useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
+		useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode);
 		SetCapture(hWnd);
 		break;
 
 	case WM_MOUSEMOVE:
+		prevCoord.x = (short)LOWORD(lParam);
+		prevCoord.y = (short)HIWORD(lParam);
 		GetClientRect(hWnd, &rect);
 		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		if (wParam & MK_LBUTTON)
@@ -258,7 +262,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			if (rubber)
 			{
-				useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
+				useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode);
 			}
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
@@ -342,25 +346,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HPEN pen;
 		if (wParam & MK_RBUTTON)
 		{
-			rubberWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
-			if (penWidth < 0)
-				penWidth = 0;
+			CustomRubber::rubberWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
+			if (CustomRubber::rubberWidth < 0)
+				CustomRubber::rubberWidth = 0;
 			GetClientRect(hWnd, &rect);
 			BitBlt(backupDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-			useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode, brush, penWidth, rubberWidth, penColor);
+			useRubber(hWnd, rubber, prevCoord.x, prevCoord.y, currentDc, bufferDc, drawMode);
 		}
 		else
 		{
-			penWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
-			if (penWidth < 0)
-				penWidth = 0;
-			pen = CreatePen(PS_SOLID, penWidth, penColor);
+			CustomShape::penWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
+			if (CustomShape::penWidth < 0)
+				CustomShape::penWidth = 0;
+			pen = CreatePen(PS_SOLID, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
 			DeleteObject(SelectObject(bufferDc, pen));
 			GetClientRect(hWnd, &rect);
 			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-			MoveToEx(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam), NULL);
-			LineTo(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
+			MoveToEx(currentDc, prevCoord.x, prevCoord.y, NULL);
+			LineTo(currentDc, prevCoord.x, prevCoord.y);
 			drawMode = CURRENT;
 			InvalidateRect(hWnd, NULL, FALSE); 
 		}

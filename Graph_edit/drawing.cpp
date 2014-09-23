@@ -1,23 +1,23 @@
 #include "drawing.h"
 
-void Drawing::initializeDcs(HWND &hWnd, 
-							HDC &mainDc, 
-							HDC &currentDc, 
-							HBITMAP &currentBitmap,
-							HDC &bufferDc,
-							HBITMAP &bufferBitmap,
-							HDC& backupDc,
-							HBITMAP& backupBitmap)
+void Drawing::initializeDcs(HWND &hWnd,
+	HDC &mainDc,
+	HDC &currentDc,
+	HBITMAP &currentBitmap,
+	HDC &bufferDc,
+	HBITMAP &bufferBitmap,
+	HDC& backupDc,
+	HBITMAP& backupBitmap)
 {
 	RECT rect;
-	HBRUSH brush;
 	HPEN pen;
+	HBRUSH brush;
 
 	mainDc = GetDC(hWnd);
 	GetClientRect(hWnd, &rect);
 
-	brush = (HBRUSH)GetStockObject(NULL_BRUSH);
 	pen = (HPEN)GetStockObject(BLACK_PEN);
+	brush = (HBRUSH)GetStockObject(NULL_BRUSH);
 
 	currentDc = CreateCompatibleDC(mainDc);
 	currentBitmap = CreateCompatibleBitmap(mainDc, rect.right, rect.bottom);
@@ -47,35 +47,33 @@ void Drawing::initializeDcs(HWND &hWnd,
 }
 
 void Drawing::useRubber(HWND &hWnd,
-				CustomRubber *rubber, 
-				int x, int y, 
-				HDC &currentDc, HDC &bufferDc, 
-				draw &drawMode, 
-				HBRUSH &oldBrush, 
-				INT penWidth, INT rubberWidth, COLORREF color)
+	CustomRubber *rubber,
+	int x, int y,
+	HDC &currentDc, HDC &bufferDc,
+	draw &drawMode)
 {
 	RECT rect;
 	HPEN pen;
 
-	pen = CreatePen(PS_SOLID, rubberWidth, RGB(255, 255, 255));
+	GetClientRect(hWnd, &rect);
+
+	pen = CreatePen(PS_SOLID, CustomRubber::rubberWidth, CustomRubber::rubberColor);
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
 
-	GetClientRect(hWnd, &rect);
 	rubber->draw(bufferDc, x, y);
 	BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-	drawMode = BUFFER;
-	InvalidateRect(hWnd, NULL, FALSE);
 
 	pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
 
-	rubber->ellipse(currentDc, x, y, rubberWidth);
-	drawMode = CURRENT;
-	InvalidateRect(hWnd, NULL, FALSE);
+	rubber->ellipse(currentDc, x, y, CustomRubber::rubberWidth);
 
-	pen = CreatePen(PS_SOLID, penWidth, RGB(0, 0, 0));
+	pen = CreatePen(PS_SOLID, CustomShape::penWidth, CustomShape::penColor);
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
+
+	drawMode = CURRENT;
+	InvalidateRect(hWnd, NULL, FALSE);
 }

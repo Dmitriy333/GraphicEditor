@@ -13,15 +13,11 @@ namespace Drawing
 		HDC& backupDc,
 		HBITMAP& backupBitmap);
 
-	void useRubber(HWND &hWnd, 
-		CustomRubber *rubber, 
+	void useRubber(HWND &hWnd,
+		CustomRubber *rubber,
 		int x,
 		int y,
-		HDC &currentDc, 
-		HDC &bufferDc,  
-		draw &drawMode, 
-		HBRUSH &oldBrush,
-		int penWidth,
-		int rubberWidth,
-		COLORREF);
+		HDC &currentDc,
+		HDC &bufferDc,
+		draw &drawMode);
 }

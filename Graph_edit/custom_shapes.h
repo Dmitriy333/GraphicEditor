@@ -8,6 +8,9 @@ protected:
 	int x, y;
 
 public:
+	static int penWidth;
+	static COLORREF penColor;
+
 	CustomShape(int, int);
 	int getX();
 	int getY();
@@ -33,6 +36,9 @@ public:
 class CustomRubber : public CustomPencil
 {
 public:
+	static int rubberWidth;
+	static COLORREF rubberColor;
+
 	CustomRubber(int, int);
 	void draw(HDC&, int, int) override;
 	void ellipse(HDC&, int, int, int);
