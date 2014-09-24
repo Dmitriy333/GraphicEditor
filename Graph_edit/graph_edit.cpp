@@ -87,6 +87,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 	static string text;
 	static POINT prevCoord;
+	HPEN pen;
+	HBRUSH brush;
 	CHOOSECOLOR cc;
 	COLORREF acrCustClr[16];
 
@@ -170,10 +172,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				HPEN pen;
 				CustomShape::penColor = cc.rgbResult;
-				pen = CreatePen(PS_SOLID, CustomShape::penWidth, CustomShape::penColor);
+				pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 				DeleteObject(SelectObject(currentDc, pen));
 				DeleteObject(SelectObject(bufferDc, pen));
 			}
+			break;
+
+		case ID_STYLE_SOLID:
+			CustomShape::penStyle = PS_SOLID;
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
+			break;
+
+		case ID_STYLE_DASH:
+			CustomShape::penStyle = PS_DASH;
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
+			break;
+
+		case ID_STYLE_DOT:
+			CustomShape::penStyle = PS_DOT;
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
+			break;
+
+		case ID_STYLE_DASH_DOT:
+			CustomShape::penStyle = PS_DASHDOT;
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
+			break;
+
+		case ID_STYLE_DASH_DOT_DOT:
+			CustomShape::penStyle = PS_DASHDOTDOT;
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
+			break;
+
+		case ID_STYLE_NONE:
+			CustomShape::penStyle = PS_NULL;
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
+			DeleteObject(SelectObject(currentDc, pen));
+			DeleteObject(SelectObject(bufferDc, pen));
 			break;
 
 		case ID_RUBBER_COLOR:
@@ -188,6 +232,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				CustomRubber::rubberColor = cc.rgbResult;
 			}
 			break;
+
+		case ID_BRUSH_COLOR:
+			ZeroMemory(&cc, sizeof(CHOOSECOLOR));
+			cc.lStructSize = sizeof(CHOOSECOLOR);
+			cc.hwndOwner = hWnd;
+			cc.lpCustColors = (LPDWORD)acrCustClr;
+			cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+
+			if (ChooseColor(&cc) == TRUE)
+			{
+				brush = CreateSolidBrush(cc.rgbResult);
+				DeleteObject(SelectObject(currentDc, brush));
+				DeleteObject(SelectObject(bufferDc, brush));
+			}
+			break;
+
+		case ID_BRUSH_NONE:
+			brush = (HBRUSH)GetStockObject(NULL_BRUSH);
+			DeleteObject(SelectObject(currentDc, brush));
+			DeleteObject(SelectObject(bufferDc, brush));
+			break;
+
 		}
 		break;
 	case WM_CREATE:
@@ -326,7 +392,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_RBUTTONUP:
 		ReleaseCapture();
 		GetClientRect(hWnd, &rect);
-		//BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 		if (rubber)
 		{
@@ -378,7 +443,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			CustomShape::penWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
 			if (CustomShape::penWidth < 0)
 				CustomShape::penWidth = 0;
-			pen = CreatePen(PS_SOLID, CustomShape::penWidth, CustomShape::penColor);
+			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
 			DeleteObject(SelectObject(bufferDc, pen));
 			GetClientRect(hWnd, &rect);

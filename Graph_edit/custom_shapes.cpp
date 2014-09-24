@@ -2,6 +2,7 @@
 
 // Shape
 int CustomShape::penWidth = 1;
+int CustomShape::penStyle = PS_SOLID;
 COLORREF CustomShape::penColor = RGB(0,0,0);
 
 CustomShape::CustomShape(int newX, int newY) : x(newX), y(newY){}

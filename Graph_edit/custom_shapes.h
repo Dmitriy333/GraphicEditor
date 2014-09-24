@@ -8,7 +8,7 @@ protected:
 	int x, y;
 
 public:
-	static int penWidth;
+	static int penWidth, penStyle;
 	static COLORREF penColor;
 
 	CustomShape(int, int);

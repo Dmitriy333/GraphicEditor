@@ -60,7 +60,7 @@ void Drawing::useRubber(HWND &hWnd,
 
 	rubber->ellipse(currentDc, x, y, CustomRubber::rubberWidth);
 
-	pen = CreatePen(PS_SOLID, CustomShape::penWidth, CustomShape::penColor);
+	pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 	DeleteObject(SelectObject(currentDc, pen));
 	DeleteObject(SelectObject(bufferDc, pen));
 
