@@ -9,9 +9,7 @@ namespace Drawing
 		HDC &currentDc,
 		HBITMAP &currentBitmap,
 		HDC &bufferDc,
-		HBITMAP &bufferBitmap,
-		HDC& backupDc,
-		HBITMAP& backupBitmap);
+		HBITMAP &bufferBitmap);
 
 	void useRubber(HWND &hWnd,
 		CustomRubber *rubber,
@@ -20,4 +18,27 @@ namespace Drawing
 		HDC &currentDc,
 		HDC &bufferDc,
 		draw &drawMode);
+
+	void initializeBackup(HWND &hWnd,
+		HDC &mainDC,
+		HDC (&backupDc)[BACKUPS],
+		HBITMAP (&backupBitmap)[BACKUPS]);
+
+	void createBackup(HWND &hWnd,
+		int &backupDepth,
+		int &restoreCount,
+		HDC &bufferDc,
+		HDC (&backupDc)[BACKUPS]);
+
+	void undo(HWND hWnd,
+		int &backupDepth,
+		int &restoreCount,
+		HDC &bufferDc,
+		HDC (&backupDc)[BACKUPS]);
+
+	void restore(HWND hWnd,
+		int &backupDepth,
+		int &restoreCount,
+		HDC &bufferDc,
+		HDC(&backupDc)[BACKUPS]);
 }

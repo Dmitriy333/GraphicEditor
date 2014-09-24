@@ -2,11 +2,11 @@
 
 #include <windows.h>
 #include <tchar.h>
-#include <time.h>     
+#include <time.h>    
+#include <string>
 #include "figures.h"
 #include "drawing.h"
 #include "resource.h"
-#include <string>
 
 using namespace Drawing;
 using namespace std;
