@@ -76,11 +76,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	RECT rect;
 	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0, backupDc[BACKUPS];
 	static INT backupDepth = -1, restoreCount = 0;
-	static HBITMAP currentBitmap, bufferBitmap, backupBitmap[BACKUPS];
 	static draw drawMode;
 	static CustomShape* shape = NULL;
 	static CustomRubber* rubber = NULL;
-	static BOOL isPencil = TRUE;
 	static Tools ToolId = PEN;
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1; //Using for polyline and polygone
 	static BOOL isPolyLine; //Use for identification: polyline or polygone
@@ -98,27 +96,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (LOWORD(wParam))
 		{
 		case ID_TOOLS_PEN:
-			isPencil = TRUE;
 			ToolId = PEN;
 			break;
 
 		case ID_TOOLS_LINE:
-			isPencil = FALSE;
 			ToolId = LINE;
 			break;
 
 		case ID_TOOLS_RECTANGLE:
-			isPencil = FALSE;
 			ToolId = RECTANGLE;
 			break;
 
 		case ID_TOOLS_ELLIPSE:
-			isPencil = FALSE;
 			ToolId = ELLIPSE;
 			break;
 
 		case ID_TOOLS_POLYGONE:
-			isPencil = FALSE;
 			isPolyLine = FALSE;
 			prevX = -1;
 			prevY = -1;
@@ -126,7 +119,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_TOOLS_POLYLINE:
-			isPencil = FALSE;
 			isPolyLine = TRUE;
 			prevX = -1;
 			prevY = -1;
@@ -134,14 +126,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_FILE_NEW:
-			initializeDcs(hWnd, mainDc, currentDc, currentBitmap, bufferDc, bufferBitmap);
-			initializeBackup(hWnd, mainDc, backupDc, backupBitmap);
+			initializeDcs(hWnd, mainDc, currentDc, bufferDc);
+			initializeBackup(hWnd, mainDc, backupDc);
 			createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 			restoreCount = 0;
 			break;
 
 		case ID_TOOLS_TEXT:
-			isPencil = FALSE;
 			ToolId = TEXT;
 			break;
 
@@ -257,18 +248,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_CREATE:
-		initializeDcs(hWnd, mainDc, currentDc, currentBitmap, bufferDc, bufferBitmap);
-		initializeBackup(hWnd, mainDc, backupDc, backupBitmap);
+		initializeDcs(hWnd, mainDc, currentDc, bufferDc);
+		initializeBackup(hWnd, mainDc, backupDc);
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 		restoreCount = 0;
 		break;
 
 	case WM_LBUTTONDOWN:
-		if (isPencil)
+		if (ToolId == PEN)
 		{
-			GetClientRect(hWnd, &rect);
 			shape = new CustomPencil((short)LOWORD(lParam), (short)HIWORD(lParam));
-			shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
 			drawMode = BUFFER;
 		}
 		else
@@ -325,7 +314,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			if (shape)
 			{
-				if (isPencil)
+				if (ToolId == PEN)
 				{
 					shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
 					drawMode = BUFFER;
@@ -351,7 +340,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_LBUTTONUP:
 		ReleaseCapture();
-		if (!isPencil && shape != NULL)
+		if ((ToolId != PEN) && shape != NULL)
 		{
 			if (prevX != -1 && prevY != -1)
 			{
