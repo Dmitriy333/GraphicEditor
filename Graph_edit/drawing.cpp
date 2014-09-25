@@ -1,12 +1,9 @@
 #include "drawing.h"
 
-void Drawing::initializeDcs(HWND &hWnd,
-	HDC &mainDc,
-	HDC &currentDc,
-	HBITMAP &currentBitmap,
-	HDC &bufferDc,
-	HBITMAP &bufferBitmap)
+
+void  Drawing::initializeDcs(HWND &hWnd, HDC &mainDc, HDC &currentDc, HDC &bufferDc)
 {
+	static HBITMAP currentBitmap, bufferBitmap;
 	RECT rect;
 	HPEN pen;
 	HBRUSH brush;
@@ -16,7 +13,6 @@ void Drawing::initializeDcs(HWND &hWnd,
 
 	pen = (HPEN)GetStockObject(BLACK_PEN);
 	brush = (HBRUSH)GetStockObject(NULL_BRUSH);
-
 	currentDc = CreateCompatibleDC(mainDc);
 	currentBitmap = CreateCompatibleBitmap(mainDc, rect.right, rect.bottom);
 	bufferDc = CreateCompatibleDC(mainDc);
@@ -35,7 +31,6 @@ void Drawing::initializeDcs(HWND &hWnd,
 	DeleteObject(SelectObject(bufferDc, pen));
 	DeleteObject(SelectObject(bufferDc, brush));
 }
-
 void Drawing::useRubber(HWND &hWnd,
 	CustomRubber *rubber,
 	int x, int y,
@@ -69,11 +64,12 @@ void Drawing::useRubber(HWND &hWnd,
 }
 
 void Drawing::initializeBackup(HWND &hWnd,
-	HDC &mainDc,
-	HDC (&backupDc)[BACKUPS],
-	HBITMAP (&backupBitmap)[BACKUPS])
+		HDC &mainDc,
+		HDC (&backupDc)[BACKUPS]
+	)
 {
 	RECT rect;
+	HBITMAP backupBitmap[BACKUPS];
 	GetClientRect(hWnd, &rect);
 
 	for (int i = 0; i < BACKUPS; i++)

@@ -7,9 +7,8 @@ namespace Drawing
 	void initializeDcs(HWND &hWnd,
 		HDC &mainDc,
 		HDC &currentDc,
-		HBITMAP &currentBitmap,
-		HDC &bufferDc,
-		HBITMAP &bufferBitmap);
+		HDC &bufferDc
+		);
 
 	void useRubber(HWND &hWnd,
 		CustomRubber *rubber,
@@ -21,8 +20,7 @@ namespace Drawing
 
 	void initializeBackup(HWND &hWnd,
 		HDC &mainDC,
-		HDC (&backupDc)[BACKUPS],
-		HBITMAP (&backupBitmap)[BACKUPS]);
+		HDC (&backupDc)[BACKUPS]);
 
 	void createBackup(HWND &hWnd,
 		int &backupDepth,
