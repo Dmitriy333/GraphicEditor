@@ -1,11 +1,12 @@
 #include "graph_edit.h"
-
 enum Tools { PEN, LINE, RECTANGLE, ELLIPSE, POLY, TEXT };
+
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine,
 	int nCmdShow)
+
 {
 	WNDCLASSEX wcex;
 
@@ -70,8 +71,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+
 	PAINTSTRUCT ps;
 	RECT rect;
 	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0, backupDc[BACKUPS];
@@ -83,13 +86,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1; //Using for polyline and polygone
 	static BOOL isPolyLine; //Use for identification: polyline or polygone
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-	static string text;
 	static POINT prevCoord;
+	static String str;
 	HPEN pen;
 	HBRUSH brush;
 	CHOOSECOLOR cc;
 	COLORREF acrCustClr[16];
-
 	switch (message)
 	{
 	case WM_COMMAND:
@@ -289,8 +291,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			case TEXT:
 				prevX = (short)LOWORD(lParam);
-				prevY = (short)HIWORD(lParam);
-				text = ' ';
+				prevY = (short)HIWORD(lParam);	
+				str.clear();
+				//pUnicodeString = A2W(pstrString);
 				break;
 			}
 			drawMode = CURRENT;
@@ -447,10 +450,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CHAR:
 		if (ToolId == 5)
 		{
+			
+			str += (TCHAR)wParam;
 			GetClientRect(hWnd, &rect);
-			char c = char(wParam);
-			text += c;
-			TextOut(bufferDc, prevX, prevY, (LPCWSTR)text.c_str(), strlen(text.c_str()));
+			TextOut(bufferDc, prevX, prevY, str.data(), str.size());
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
 		}

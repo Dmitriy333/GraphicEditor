@@ -7,7 +7,8 @@
 #include "figures.h"
 #include "drawing.h"
 #include "resource.h"
-
+#include <xstring>
+typedef std::basic_string<TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR> > String;
 using namespace Drawing;
 using namespace std;
 
