@@ -19,10 +19,12 @@ void  Drawing::initializeDcs(HWND &hWnd, HDC &mainDc, HDC &currentDc, HDC &buffe
 	bufferBitmap = CreateCompatibleBitmap(mainDc, rect.right, rect.bottom);
 
 	DeleteObject(SelectObject(currentDc, currentBitmap));
+	DeleteObject(currentBitmap);
 	DeleteObject(SelectObject(currentDc, (HBRUSH)WHITE_BRUSH));
 	PatBlt(currentDc, 0, 0, rect.right, rect.bottom, PATCOPY);
 
 	DeleteObject(SelectObject(bufferDc, bufferBitmap));
+	DeleteObject(bufferBitmap);
 	DeleteObject(SelectObject(bufferDc, (HBRUSH)WHITE_BRUSH));
 	PatBlt(bufferDc, 0, 0, rect.right, rect.bottom, PATCOPY);
 
@@ -30,6 +32,9 @@ void  Drawing::initializeDcs(HWND &hWnd, HDC &mainDc, HDC &currentDc, HDC &buffe
 	DeleteObject(SelectObject(currentDc, brush));
 	DeleteObject(SelectObject(bufferDc, pen));
 	DeleteObject(SelectObject(bufferDc, brush));
+
+	DeleteObject(pen);
+	DeleteObject(brush);
 }
 void Drawing::useRubber(HWND &hWnd,
 	CustomRubber *rubber,
@@ -77,6 +82,7 @@ void Drawing::initializeBackup(HWND &hWnd,
 		backupDc[i] = CreateCompatibleDC(mainDc);
 		backupBitmap[i] = CreateCompatibleBitmap(mainDc, rect.right, rect.bottom);
 		DeleteObject(SelectObject(backupDc[i], backupBitmap[i]));
+		DeleteObject(backupBitmap[i]);
 		DeleteObject(SelectObject(backupDc[i], (HBRUSH)WHITE_BRUSH));
 		PatBlt(backupDc[i], 0, 0, rect.right, rect.bottom, PATCOPY);
 	}

@@ -92,6 +92,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	HBRUSH brush;
 	CHOOSECOLOR cc;
 	COLORREF acrCustClr[16];
+
 	switch (message)
 	{
 	case WM_COMMAND:
@@ -293,7 +294,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				prevX = (short)LOWORD(lParam);
 				prevY = (short)HIWORD(lParam);	
 				str.clear();
-				//pUnicodeString = A2W(pstrString);
 				break;
 			}
 			drawMode = CURRENT;
@@ -337,6 +337,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode);
 			}
+		}
+		else
+		{
+			GetClientRect(hWnd, &rect);
+			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			MoveToEx(currentDc, prevCoord.x, prevCoord.y, NULL);
+			LineTo(currentDc, prevCoord.x, prevCoord.y);
+			drawMode = CURRENT;
+			InvalidateRect(hWnd, &rect, FALSE);
 		}
 		InvalidateRect(hWnd, NULL, FALSE);
 		break;
