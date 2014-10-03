@@ -1,7 +1,4 @@
 #include "graph_edit.h"
-#include <wingdi.h>
-enum Tools { PEN, LINE, RECTANGLE, ELLIPSE, POLY, TEXT };
-
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -61,7 +58,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	UpdateWindow(hWnd);
 
 	MSG msg;
-	HACCEL hAccel = LoadAccelerators(hInstance, (LPCWSTR)IDR_ACCELERATOR1);
+	HACCEL hAccel = LoadAccelerators(hInstance, (LPCWSTR)IDR_ACCELERATOR);
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateAccelerator(hWnd, hAccel, &msg);
@@ -183,7 +180,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	COLORREF acrCustClr[16];
 	OPENFILENAME ofn;
 	static TCHAR sfile[MAX_PATH];
-	static bool isFile = false;
+	static BOOL isFile = false;
+	static DOUBLE zoom = DEFAULT_ZOOM;
+	static INT prevZoom = 0;
+	static BOOL isScale = false;
 
 	switch (message)
 	{
@@ -459,6 +459,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_MOUSEMOVE:
+		if (isScale)
+			break;
 		prevCoord.x = (short)LOWORD(lParam);
 		prevCoord.y = (short)HIWORD(lParam);
 		GetClientRect(hWnd, &rect);
@@ -590,6 +592,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			GetClientRect(hWnd, &rect);
 			useRubber(hWnd, rubber, prevCoord.x, prevCoord.y, currentDc, bufferDc, drawMode);
 		}
+		else if (wParam & MK_CONTROL)
+		{
+			if (!isScale)
+				isScale = true;
+			GetClientRect(hWnd, &rect);
+			if (GET_WHEEL_DELTA_WPARAM(wParam) < 0)
+			{
+				zoom *= DELTA;
+			}
+			else
+			{
+				zoom /= DELTA;
+			}
+			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
+			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+			HANDLE oldPen = SelectObject(currentDc, pen);
+			DeleteObject(SelectObject(bufferDc, pen));
+			HANDLE oldBrush = SelectObject(currentDc, brush);
+			DeleteObject(SelectObject(bufferDc, brush));
+			Rectangle(currentDc, 0, 0, rect.right, rect.bottom);
+			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+
+			StretchBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
+
+			pen = (HPEN)GetStockObject(BLACK_PEN);
+			brush = (HBRUSH)GetStockObject(NULL_BRUSH);
+			oldPen = SelectObject(currentDc, pen);
+			DeleteObject(SelectObject(bufferDc, pen));
+			oldBrush = SelectObject(currentDc, brush);
+			DeleteObject(SelectObject(bufferDc, brush));
+			Rectangle(currentDc, 0, 0, (int)(rect.right / zoom), (int)(rect.bottom / zoom));
+			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+			DeleteObject(pen);
+			DeleteObject(oldPen);
+			DeleteObject(brush);
+			DeleteObject(oldBrush);
+
+			drawMode = CURRENT;
+			InvalidateRect(hWnd, &rect, false);
+		}
 		else
 		{
 			CustomShape::penWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
@@ -616,6 +664,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			TextOut(bufferDc, prevX, prevY, str.data(), str.size());
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		break;
+
+	case WM_KEYUP:
+		if (wParam & VK_CONTROL && isScale)
+		{	
+			GetClientRect(hWnd, &rect);
+			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
+			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+			HANDLE oldPen = SelectObject(currentDc, pen);
+			DeleteObject(SelectObject(bufferDc, pen));
+			HANDLE oldBrush = SelectObject(currentDc, brush);
+			DeleteObject(SelectObject(bufferDc, brush));
+			Rectangle(currentDc, 0, 0, rect.right, rect.bottom);
+			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+			DeleteObject(pen);
+			DeleteObject(oldPen);
+			DeleteObject(brush);
+			DeleteObject(oldBrush);
+
+			isScale = false;
+			StretchBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
+			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
+			zoom = DEFAULT_ZOOM;
+			drawMode = BUFFER;
+			InvalidateRect(hWnd, &rect, false);
 		}
 		break;
 
