@@ -168,11 +168,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static draw drawMode;
 	static CustomShape* shape = NULL;
 	static CustomRubber* rubber = NULL;
-	static Tools ToolId = PEN;
+	static Tools ToolId = PEN, prevToolId;
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1;
 	static BOOL isPolyLine;
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-	static POINT prevCoord;
+	static POINT prevCoord, prevMove, newMove;
 	static String str;
 	HPEN pen;
 	HBRUSH brush;
@@ -183,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static BOOL isFile = false;
 	static DOUBLE zoom = DEFAULT_ZOOM;
 	static INT prevZoom = 0;
-	static BOOL isScale = false;
+	static BOOL isScale = false, lPressed = false;
 
 	switch (message)
 	{
@@ -408,6 +408,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_LBUTTONDOWN:
+		if (ToolId == NONE)
+			ToolId = prevToolId;
+		lPressed = true;
+		if (wParam & MK_CONTROL)
+		{
+			prevMove.x = (short)LOWORD(lParam);
+			prevMove.y = (short)HIWORD(lParam);
+		}
 		if (ToolId == PEN)
 		{
 			shape = new CustomPencil((short)LOWORD(lParam), (short)HIWORD(lParam));
@@ -467,7 +475,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 		if (wParam & MK_LBUTTON)
 		{
-			if (shape)
+			if (wParam & MK_CONTROL)
+			{
+				HPEN pen = (HPEN)GetStockObject(NULL_PEN);
+				HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+				HANDLE oldPen = SelectObject(currentDc, pen);
+				DeleteObject(SelectObject(bufferDc, pen));
+				HANDLE oldBrush = SelectObject(currentDc, brush);
+				DeleteObject(SelectObject(bufferDc, brush));
+				Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
+				DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+				DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+				DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+				DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+
+				GetClientRect(hWnd, &rect);
+				INT diffX = (short)LOWORD(lParam) - prevMove.x;
+				INT diffY = (short)HIWORD(lParam) - prevMove.y;
+				newMove.x = (short)LOWORD(lParam);
+				newMove.y = (short)HIWORD(lParam);
+				BitBlt(currentDc, diffX, diffY, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+				drawMode = CURRENT;
+
+				pen = (HPEN)GetStockObject(BLACK_PEN);
+				brush = (HBRUSH)GetStockObject(NULL_BRUSH);
+				oldPen = SelectObject(currentDc, pen);
+				DeleteObject(SelectObject(bufferDc, pen));
+				oldBrush = SelectObject(currentDc, brush);
+				DeleteObject(SelectObject(bufferDc, brush));
+				Rectangle(currentDc, diffX, diffY, rect.right + diffX, rect.bottom + diffY);
+				DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+				DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+				DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+				DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+				DeleteObject(pen);
+				DeleteObject(oldPen);
+				DeleteObject(brush);
+				DeleteObject(oldBrush);
+			}
+			else if (shape)
 			{
 				if (ToolId == PEN)
 				{
@@ -503,6 +549,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_LBUTTONUP:
+		lPressed = false;
 		ReleaseCapture();
 		if ((ToolId != PEN) && shape != NULL)
 		{
@@ -515,6 +562,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		if (wParam & MK_CONTROL)
+		{
+			GetClientRect(hWnd, &rect);
+			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
+			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+			HANDLE oldPen = SelectObject(currentDc, pen);
+			DeleteObject(SelectObject(bufferDc, pen));
+			HANDLE oldBrush = SelectObject(currentDc, brush);
+			DeleteObject(SelectObject(bufferDc, brush));
+			Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
+			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+			DeleteObject(pen);
+			DeleteObject(oldPen);
+			DeleteObject(brush);
+			DeleteObject(oldBrush);
+
+			GetClientRect(hWnd, &rect);
+			INT diffX = (short)LOWORD(lParam) - prevMove.x;
+			INT diffY = (short)HIWORD(lParam) - prevMove.y;
+			BitBlt(currentDc, diffX, diffY, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
+			drawMode = BUFFER;
+			InvalidateRect(hWnd, &rect, FALSE);
 		}
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 		delete shape;
@@ -677,7 +751,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DeleteObject(SelectObject(bufferDc, pen));
 			HANDLE oldBrush = SelectObject(currentDc, brush);
 			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, rect.right, rect.bottom);
+			Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
 			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
 			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
 			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
@@ -693,6 +767,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			zoom = DEFAULT_ZOOM;
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, &rect, false);
+		}
+		if (wParam & VK_CONTROL && lPressed)
+		{
+			GetClientRect(hWnd, &rect);
+			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
+			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+			HANDLE oldPen = SelectObject(currentDc, pen);
+			DeleteObject(SelectObject(bufferDc, pen));
+			HANDLE oldBrush = SelectObject(currentDc, brush);
+			DeleteObject(SelectObject(bufferDc, brush));
+			Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
+			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
+			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
+			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
+			DeleteObject(pen);
+			DeleteObject(oldPen);
+			DeleteObject(brush);
+			DeleteObject(oldBrush);
+
+			ToolId = NONE;
+			GetClientRect(hWnd, &rect);
+			INT diffX = newMove.x - prevMove.x;
+			INT diffY = newMove.y - prevMove.y;
+			BitBlt(currentDc, diffX, diffY, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
+			drawMode = BUFFER;
+			InvalidateRect(hWnd, &rect, FALSE);
 		}
 		break;
 
