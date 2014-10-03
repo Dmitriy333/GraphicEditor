@@ -72,7 +72,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
-/*Õ¿¡Œ– ‘”Õ ÷»…, Õ≈Œ¡’Œƒ»Ã€’ ƒÀﬂ —Œ’–¿Õ≈Õ»ﬂ –»—”Õ ¿*/
+// Saving functions
 PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
 {
 	BITMAP bmp;
@@ -182,7 +182,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	CHOOSECOLOR cc;
 	COLORREF acrCustClr[16];
 	OPENFILENAME ofn;
-	TCHAR sfile[MAX_PATH];
+	static TCHAR sfile[MAX_PATH];
+	static bool isFile = false;
 
 	switch (message)
 	{
@@ -207,7 +208,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 				hDC = GetDC(hWnd);
 				hMemDC = CreateCompatibleDC(hDC);
-				hBitmap = (HBITMAP)LoadImage(hInst, ofn.lpstrFile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+				hBitmap = (HBITMAP)LoadImage(hInst, sfile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+				isFile = true;
 				GetObject(hBitmap, sizeof(BITMAP), &bm);
 				SelectObject(bufferDc, hBitmap);
 				BitBlt(hDC, 0, 0, bm.bmWidth, bm.bmHeight, bufferDc, 0, 0, SRCCOPY);
@@ -216,8 +218,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				DeleteObject(hBitmap);
 			}
 			break;
-		
+
 		case ID_FILE_SAVE:
+			if (isFile)
+			{
+				RECT rect;
+				GetClientRect(hWnd, &rect);
+				CreateBMPFile(hWnd, sfile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top)), Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top), GetDC(hWnd));
+				break;
+			}
+		
+		case ID_FILE_SAVEAS:
 			ZeroMemory(&ofn, sizeof(ofn));
 			ZeroMemory(sfile, sizeof(TCHAR)*MAX_PATH);
 
@@ -234,6 +245,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				GetClientRect(hWnd, &rect);
 
 				CreateBMPFile(hWnd, ofn.lpstrFile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top)), Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top), GetDC(hWnd));
+				isFile = true;
 			}
 			break;
 
