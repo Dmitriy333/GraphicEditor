@@ -1,4 +1,5 @@
 #include "graph_edit.h"
+#include <wingdi.h>
 enum Tools { PEN, LINE, RECTANGLE, ELLIPSE, POLY, TEXT };
 
 
@@ -71,6 +72,94 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
+/*Õ¿¡Œ– ‘”Õ ÷»…, Õ≈Œ¡’Œƒ»Ã€’ ƒÀﬂ —Œ’–¿Õ≈Õ»ﬂ –»—”Õ ¿*/
+PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
+{
+	BITMAP bmp;
+	PBITMAPINFO pbmi;
+	WORD cClrBits;  
+	
+	GetObject(hBmp, sizeof(BITMAP), (LPSTR)&bmp);
+	cClrBits = (WORD)(bmp.bmPlanes * bmp.bmBitsPixel);
+	
+	if (cClrBits == 1)
+		cClrBits = 1;
+	else if (cClrBits <= 4)
+		cClrBits = 4;
+	else if (cClrBits <= 8)
+		cClrBits = 8;
+	else if (cClrBits <= 16)
+		cClrBits = 16;
+	else if (cClrBits <= 24)
+		cClrBits = 24;
+	else cClrBits = 32;
+	
+	if (cClrBits < 24)
+		pbmi = (PBITMAPINFO)LocalAlloc(LPTR, sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * (1 << cClrBits));
+	else
+		pbmi = (PBITMAPINFO)LocalAlloc(LPTR, sizeof(BITMAPINFOHEADER));
+
+	pbmi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	pbmi->bmiHeader.biWidth = bmp.bmWidth;
+	pbmi->bmiHeader.biHeight = bmp.bmHeight;
+	pbmi->bmiHeader.biPlanes = bmp.bmPlanes;
+	pbmi->bmiHeader.biBitCount = bmp.bmBitsPixel;
+
+	if (cClrBits < 24)
+		pbmi->bmiHeader.biClrUsed = (1 << cClrBits);
+ 
+	pbmi->bmiHeader.biCompression = BI_RGB;
+	pbmi->bmiHeader.biSizeImage = ((pbmi->bmiHeader.biWidth * cClrBits + 31) & ~31) / 8	* pbmi->bmiHeader.biHeight; 
+	pbmi->bmiHeader.biClrImportant = 0;
+	return pbmi;
+}
+
+void CreateBMPFile(HWND hwnd, LPTSTR pszFile, PBITMAPINFO pbi, HBITMAP hBMP, HDC hDC)
+{
+	HANDLE hf;              
+	BITMAPFILEHEADER hdr;     
+	PBITMAPINFOHEADER pbih;     
+	LPBYTE lpBits;              
+	DWORD dwTotal;            
+	DWORD cb;                   
+	BYTE *hp;                     
+	DWORD dwTmp;
+
+	pbih = (PBITMAPINFOHEADER)pbi;
+	lpBits = (LPBYTE)GlobalAlloc(GMEM_FIXED, pbih->biSizeImage);
+
+	GetDIBits(hDC, hBMP, 0, (WORD)pbih->biHeight, lpBits, pbi, DIB_RGB_COLORS);
+  
+	hf = CreateFile(pszFile, GENERIC_READ | GENERIC_WRITE, (DWORD)0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, (HANDLE)NULL);
+	
+	hdr.bfType = 0x4d42;
+	hdr.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) + pbih->biSize + pbih->biClrUsed * sizeof(RGBQUAD) + pbih->biSizeImage);
+	hdr.bfReserved1 = 0;
+	hdr.bfReserved2 = 0;  
+	hdr.bfOffBits = (DWORD) sizeof(BITMAPFILEHEADER) + pbih->biSize + pbih->biClrUsed * sizeof(RGBQUAD); 
+	WriteFile(hf, (LPVOID)&hdr, sizeof(BITMAPFILEHEADER), (LPDWORD)&dwTmp, NULL);
+	WriteFile(hf, (LPVOID)pbih, sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD), (LPDWORD)&dwTmp, (NULL));
+	dwTotal = cb = pbih->biSizeImage;
+	hp = lpBits;
+	WriteFile(hf, (LPSTR)hp, (int)cb, (LPDWORD)&dwTmp, NULL);
+	CloseHandle(hf);
+	GlobalFree((HGLOBAL)lpBits);
+}
+
+HBITMAP Create_hBitmap(HDC hDC, int w, int h)
+{
+	HDC hDCmem;
+	HBITMAP hbm, holdBM;
+	hDCmem = CreateCompatibleDC(hDC);
+	hbm = CreateCompatibleBitmap(hDC, w, h);
+	holdBM = (HBITMAP)SelectObject(hDCmem, hbm);
+	BitBlt(hDCmem, 0, 0, w, h, hDC, 0, 0, SRCCOPY);
+	SelectObject(hDCmem, holdBM);
+	DeleteDC(hDCmem);
+	DeleteObject(holdBM);
+	return hbm;
+}
+
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -83,8 +172,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static CustomShape* shape = NULL;
 	static CustomRubber* rubber = NULL;
 	static Tools ToolId = PEN;
-	static INT prevX = -1, prevY = -1, startX = -1, startY = -1; //Using for polyline and polygone
-	static BOOL isPolyLine; //Use for identification: polyline or polygone
+	static INT prevX = -1, prevY = -1, startX = -1, startY = -1;
+	static BOOL isPolyLine;
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 	static POINT prevCoord;
 	static String str;
@@ -92,12 +181,62 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	HBRUSH brush;
 	CHOOSECOLOR cc;
 	COLORREF acrCustClr[16];
+	OPENFILENAME ofn;
+	TCHAR sfile[MAX_PATH];
 
 	switch (message)
 	{
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
+		case ID_FILE_OPEN:
+			ZeroMemory(&ofn, sizeof(ofn));
+			ZeroMemory(sfile, sizeof(TCHAR)*MAX_PATH);
+
+			ofn.lStructSize = sizeof(ofn);
+			ofn.lpstrFile = sfile;
+			ofn.nMaxFile = MAX_PATH;
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+
+			if (GetOpenFileName(&ofn))
+			{
+				HBITMAP hBitmap;
+				BITMAP bm;
+				HDC hDC;
+				HDC hMemDC;
+
+				hDC = GetDC(hWnd);
+				hMemDC = CreateCompatibleDC(hDC);
+				hBitmap = (HBITMAP)LoadImage(hInst, ofn.lpstrFile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+				GetObject(hBitmap, sizeof(BITMAP), &bm);
+				SelectObject(bufferDc, hBitmap);
+				BitBlt(hDC, 0, 0, bm.bmWidth, bm.bmHeight, bufferDc, 0, 0, SRCCOPY);
+				DeleteDC(hMemDC);
+				ReleaseDC(hWnd, hDC);
+				DeleteObject(hBitmap);
+			}
+			break;
+		
+		case ID_FILE_SAVE:
+			ZeroMemory(&ofn, sizeof(ofn));
+			ZeroMemory(sfile, sizeof(TCHAR)*MAX_PATH);
+
+			ofn.lStructSize = sizeof(ofn);
+			ofn.lpstrFile = sfile;
+			ofn.nMaxFile = MAX_PATH;
+			ofn.lpstrFilter = (LPCWSTR)TEXT("bmp\0*.bmp");
+			ofn.lpstrDefExt = (LPCWSTR)TEXT("bmp\0*.bmp");
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+
+			if (GetSaveFileName(&ofn))
+			{
+				RECT rect;
+				GetClientRect(hWnd, &rect);
+
+				CreateBMPFile(hWnd, ofn.lpstrFile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top)), Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top), GetDC(hWnd));
+			}
+			break;
+
 		case ID_TOOLS_PEN:
 			ToolId = PEN;
 			break;
@@ -136,7 +275,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_TOOLS_TEXT:
-			ToolId = TEXT;
+			ToolId = TEXT;			
 			break;
 
 		case ID_FILE_UNDO:
@@ -247,7 +386,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DeleteObject(SelectObject(currentDc, brush));
 			DeleteObject(SelectObject(bufferDc, brush));
 			break;
-
 		}
 		break;
 	case WM_CREATE:
@@ -404,6 +542,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		paintDc = BeginPaint(hWnd, &ps);
 		GetClientRect(hWnd, &rect);
+
 		switch (drawMode)
 		{
 		case CURRENT:
