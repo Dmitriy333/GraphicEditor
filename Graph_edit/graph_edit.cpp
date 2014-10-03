@@ -611,7 +611,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DeleteObject(SelectObject(bufferDc, pen));
 			HANDLE oldBrush = SelectObject(currentDc, brush);
 			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, rect.right, rect.bottom);
+			Rectangle(currentDc, 0, 0, rect.right+10, rect.bottom+10);
 			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
 			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
 			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
