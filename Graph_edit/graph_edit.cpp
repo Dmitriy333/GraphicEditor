@@ -38,7 +38,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		1920, 1080,
+		1940, 1050,
 		NULL,
 		NULL,
 		hInstance,
@@ -74,11 +74,11 @@ PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
 {
 	BITMAP bmp;
 	PBITMAPINFO pbmi;
-	WORD cClrBits;  
-	
+	WORD cClrBits;
+
 	GetObject(hBmp, sizeof(BITMAP), (LPSTR)&bmp);
 	cClrBits = (WORD)(bmp.bmPlanes * bmp.bmBitsPixel);
-	
+
 	if (cClrBits == 1)
 		cClrBits = 1;
 	else if (cClrBits <= 4)
@@ -90,9 +90,9 @@ PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
 	else if (cClrBits <= 24)
 		cClrBits = 24;
 	else cClrBits = 32;
-	
+
 	if (cClrBits < 24)
-		pbmi = (PBITMAPINFO)LocalAlloc(LPTR, sizeof(BITMAPINFOHEADER) + sizeof(RGBQUAD) * (1 << cClrBits));
+		pbmi = (PBITMAPINFO)LocalAlloc(LPTR, sizeof(BITMAPINFOHEADER)+sizeof(RGBQUAD)* (1 << cClrBits));
 	else
 		pbmi = (PBITMAPINFO)LocalAlloc(LPTR, sizeof(BITMAPINFOHEADER));
 
@@ -104,38 +104,38 @@ PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
 
 	if (cClrBits < 24)
 		pbmi->bmiHeader.biClrUsed = (1 << cClrBits);
- 
+
 	pbmi->bmiHeader.biCompression = BI_RGB;
-	pbmi->bmiHeader.biSizeImage = ((pbmi->bmiHeader.biWidth * cClrBits + 31) & ~31) / 8	* pbmi->bmiHeader.biHeight; 
+	pbmi->bmiHeader.biSizeImage = ((pbmi->bmiHeader.biWidth * cClrBits + 31) & ~31) / 8 * pbmi->bmiHeader.biHeight;
 	pbmi->bmiHeader.biClrImportant = 0;
 	return pbmi;
 }
 
 void CreateBMPFile(HWND hwnd, LPTSTR pszFile, PBITMAPINFO pbi, HBITMAP hBMP, HDC hDC)
 {
-	HANDLE hf;              
-	BITMAPFILEHEADER hdr;     
-	PBITMAPINFOHEADER pbih;     
-	LPBYTE lpBits;              
-	DWORD dwTotal;            
-	DWORD cb;                   
-	BYTE *hp;                     
+	HANDLE hf;
+	BITMAPFILEHEADER hdr;
+	PBITMAPINFOHEADER pbih;
+	LPBYTE lpBits;
+	DWORD dwTotal;
+	DWORD cb;
+	BYTE *hp;
 	DWORD dwTmp;
 
 	pbih = (PBITMAPINFOHEADER)pbi;
 	lpBits = (LPBYTE)GlobalAlloc(GMEM_FIXED, pbih->biSizeImage);
 
 	GetDIBits(hDC, hBMP, 0, (WORD)pbih->biHeight, lpBits, pbi, DIB_RGB_COLORS);
-  
+
 	hf = CreateFile(pszFile, GENERIC_READ | GENERIC_WRITE, (DWORD)0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, (HANDLE)NULL);
-	
+
 	hdr.bfType = 0x4d42;
-	hdr.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) + pbih->biSize + pbih->biClrUsed * sizeof(RGBQUAD) + pbih->biSizeImage);
+	hdr.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER)+pbih->biSize + pbih->biClrUsed * sizeof(RGBQUAD)+pbih->biSizeImage);
 	hdr.bfReserved1 = 0;
-	hdr.bfReserved2 = 0;  
-	hdr.bfOffBits = (DWORD) sizeof(BITMAPFILEHEADER) + pbih->biSize + pbih->biClrUsed * sizeof(RGBQUAD); 
+	hdr.bfReserved2 = 0;
+	hdr.bfOffBits = (DWORD) sizeof(BITMAPFILEHEADER)+pbih->biSize + pbih->biClrUsed * sizeof(RGBQUAD);
 	WriteFile(hf, (LPVOID)&hdr, sizeof(BITMAPFILEHEADER), (LPDWORD)&dwTmp, NULL);
-	WriteFile(hf, (LPVOID)pbih, sizeof(BITMAPINFOHEADER) + pbih->biClrUsed * sizeof(RGBQUAD), (LPDWORD)&dwTmp, (NULL));
+	WriteFile(hf, (LPVOID)pbih, sizeof(BITMAPINFOHEADER)+pbih->biClrUsed * sizeof(RGBQUAD), (LPDWORD)&dwTmp, (NULL));
 	dwTotal = cb = pbih->biSizeImage;
 	hp = lpBits;
 	WriteFile(hf, (LPSTR)hp, (int)cb, (LPDWORD)&dwTmp, NULL);
@@ -168,11 +168,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static draw drawMode;
 	static CustomShape* shape = NULL;
 	static CustomRubber* rubber = NULL;
-	static Tools ToolId = PEN, prevToolId;
+	static Tools ToolId = PEN;
 	static INT prevX = -1, prevY = -1, startX = -1, startY = -1;
 	static BOOL isPolyLine;
 	static HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-	static POINT prevCoord, prevMove, newMove;
+	static POINT prevCoord, prevMove = { 0, 0 }, delta = { 0, 0 };
 	static String str;
 	HPEN pen;
 	HBRUSH brush;
@@ -182,8 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static TCHAR sfile[MAX_PATH];
 	static BOOL isFile = false;
 	static DOUBLE zoom = DEFAULT_ZOOM;
-	static INT prevZoom = 0;
-	static BOOL isScale = false, lPressed = false;
+	static INT x, y;
 
 	switch (message)
 	{
@@ -224,10 +223,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				RECT rect;
 				GetClientRect(hWnd, &rect);
-				CreateBMPFile(hWnd, sfile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top)), Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top), GetDC(hWnd));
+				CreateBMPFile(hWnd, sfile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(bufferDc, rect.right, rect.bottom)), Create_hBitmap(bufferDc, rect.right, rect.bottom), bufferDc);
 				break;
 			}
-		
+
 		case ID_FILE_SAVEAS:
 			ZeroMemory(&ofn, sizeof(ofn));
 			ZeroMemory(sfile, sizeof(TCHAR)*MAX_PATH);
@@ -244,7 +243,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				RECT rect;
 				GetClientRect(hWnd, &rect);
 
-				CreateBMPFile(hWnd, ofn.lpstrFile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top)), Create_hBitmap(GetDC(hWnd), rect.right - rect.left, rect.bottom - rect.top), GetDC(hWnd));
+				CreateBMPFile(hWnd, ofn.lpstrFile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(bufferDc, rect.right, rect.bottom)), Create_hBitmap(bufferDc, rect.right, rect.bottom), bufferDc);
 				isFile = true;
 			}
 			break;
@@ -284,10 +283,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			initializeBackup(hWnd, mainDc, backupDc);
 			createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 			restoreCount = 0;
+			CustomShape::penColor = RGB(0, 0, 0);
+			CustomShape::penStyle = PS_SOLID;
+			CustomShape::penWidth = 1;
+			CustomRubber::rubberColor = RGB(255, 255, 255);
+			CustomRubber::rubberWidth = 20;
+			ToolId = PEN;
+			zoom = DEFAULT_ZOOM;
+			delta = { 0, 0 };
+			drawMode = BUFFER;
+			InvalidateRect(hWnd, &rect, TRUE);
 			break;
 
 		case ID_TOOLS_TEXT:
-			ToolId = TEXT;			
+			ToolId = TEXT;
 			break;
 
 		case ID_FILE_UNDO:
@@ -408,17 +417,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_LBUTTONDOWN:
-		if (ToolId == NONE)
-			ToolId = prevToolId;
-		lPressed = true;
+		x = (short)(LOWORD(lParam) * zoom) - delta.x;
+		y = (short)(HIWORD(lParam) * zoom) - delta.y;
 		if (wParam & MK_CONTROL)
 		{
 			prevMove.x = (short)LOWORD(lParam);
 			prevMove.y = (short)HIWORD(lParam);
 		}
-		if (ToolId == PEN)
+		else if (ToolId == PEN)
 		{
-			shape = new CustomPencil((short)LOWORD(lParam), (short)HIWORD(lParam));
+			shape = new CustomPencil(x, y);
+			shape->draw(bufferDc, x, y);
 			drawMode = BUFFER;
 		}
 		else
@@ -426,22 +435,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			switch (ToolId)
 			{
 			case LINE:
-				shape = new CustomLine((short)LOWORD(lParam), (short)HIWORD(lParam));
+				shape = new CustomLine(x, y);
 				break;
 
 			case RECTANGLE:
-				shape = new CustomRectangle((short)LOWORD(lParam), (short)HIWORD(lParam));
+				shape = new CustomRectangle(x, y);
 				break;
 
 			case ELLIPSE:
-				shape = new CustomEllipse((short)LOWORD(lParam), (short)HIWORD(lParam));
+				shape = new CustomEllipse(x, y);
 				break;
 
 			case POLY:
 				if (prevX == -1 && prevY == -1)
 				{
-					prevX = (short)LOWORD(lParam);
-					prevY = (short)HIWORD(lParam);
+					prevX = x;
+					prevY = y;
 					startX = prevX;
 					startY = prevY;
 				}
@@ -449,8 +458,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 
 			case TEXT:
-				prevX = (short)LOWORD(lParam);
-				prevY = (short)HIWORD(lParam);	
+				prevX = x;
+				prevY = y;
 				str.clear();
 				break;
 			}
@@ -460,71 +469,44 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_RBUTTONDOWN:
+		x = (short)(LOWORD(lParam) * zoom) - delta.x;
+		y = (short)(HIWORD(lParam) * zoom) - delta.y;
 		GetClientRect(hWnd, &rect);
-		rubber = new CustomRubber((short)LOWORD(lParam), (short)HIWORD(lParam));
-		useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode);
+		rubber = new CustomRubber(x, y);
+		useRubber(hWnd, rubber, x, y, currentDc, bufferDc, drawMode);
 		SetCapture(hWnd);
 		break;
 
 	case WM_MOUSEMOVE:
-		if (isScale)
-			break;
-		prevCoord.x = (short)LOWORD(lParam);
-		prevCoord.y = (short)HIWORD(lParam);
+		x = (short)(LOWORD(lParam) * zoom) - delta.x;
+		y = (short)(HIWORD(lParam) * zoom) - delta.y;
+		prevCoord.x = x;
+		prevCoord.y = y;
 		GetClientRect(hWnd, &rect);
-		BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+		InvalidateRect(hWnd, NULL, FALSE);
 		if (wParam & MK_LBUTTON)
 		{
 			if (wParam & MK_CONTROL)
 			{
-				HPEN pen = (HPEN)GetStockObject(NULL_PEN);
-				HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-				HANDLE oldPen = SelectObject(currentDc, pen);
-				DeleteObject(SelectObject(bufferDc, pen));
-				HANDLE oldBrush = SelectObject(currentDc, brush);
-				DeleteObject(SelectObject(bufferDc, brush));
-				Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
-				DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-				DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-				DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-				DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-
-				GetClientRect(hWnd, &rect);
-				INT diffX = (short)LOWORD(lParam) - prevMove.x;
-				INT diffY = (short)HIWORD(lParam) - prevMove.y;
-				newMove.x = (short)LOWORD(lParam);
-				newMove.y = (short)HIWORD(lParam);
-				BitBlt(currentDc, diffX, diffY, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-				drawMode = CURRENT;
-
-				pen = (HPEN)GetStockObject(BLACK_PEN);
-				brush = (HBRUSH)GetStockObject(NULL_BRUSH);
-				oldPen = SelectObject(currentDc, pen);
-				DeleteObject(SelectObject(bufferDc, pen));
-				oldBrush = SelectObject(currentDc, brush);
-				DeleteObject(SelectObject(bufferDc, brush));
-				Rectangle(currentDc, diffX, diffY, rect.right + diffX, rect.bottom + diffY);
-				DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-				DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-				DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-				DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-				DeleteObject(pen);
-				DeleteObject(oldPen);
-				DeleteObject(brush);
-				DeleteObject(oldBrush);
+				delta.x += (short)((LOWORD(lParam) - prevMove.x) * zoom);
+				delta.y += (short)((HIWORD(lParam) - prevMove.y) *zoom);
+				prevMove.x = (short)LOWORD(lParam);
+				prevMove.y = (short)HIWORD(lParam);
+				drawMode = BUFFER;
+				InvalidateRect(hWnd, NULL, true);
 			}
 			else if (shape)
 			{
 				if (ToolId == PEN)
 				{
-					shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
+					shape->draw(bufferDc, x, y);
 					drawMode = BUFFER;
 				}
 				else
 				{
 					GetClientRect(hWnd, &rect);
 					BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-					shape->draw(currentDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
+					shape->draw(currentDc, x, y);
 					drawMode = CURRENT;
 				}
 			}
@@ -533,7 +515,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			if (rubber)
 			{
-				useRubber(hWnd, rubber, (short)LOWORD(lParam), (short)HIWORD(lParam), currentDc, bufferDc, drawMode);
+				useRubber(hWnd, rubber, x, y, currentDc, bufferDc, drawMode);
 			}
 		}
 		else
@@ -543,52 +525,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			MoveToEx(currentDc, prevCoord.x, prevCoord.y, NULL);
 			LineTo(currentDc, prevCoord.x, prevCoord.y);
 			drawMode = CURRENT;
-			InvalidateRect(hWnd, &rect, FALSE);
 		}
-		InvalidateRect(hWnd, NULL, FALSE);
 		break;
 
 	case WM_LBUTTONUP:
-		lPressed = false;
+		x = (short)(LOWORD(lParam) * zoom) - delta.x;
+		y = (short)(HIWORD(lParam) * zoom) - delta.y;
 		ReleaseCapture();
 		if ((ToolId != PEN) && shape != NULL)
 		{
 			if (prevX != -1 && prevY != -1)
 			{
-				prevX = (int)LOWORD(lParam);
-				prevY = (int)HIWORD(lParam);
+				prevX = x;
+				prevY = y;
 			}
 			GetClientRect(hWnd, &rect);
-			shape->draw(bufferDc, (short)LOWORD(lParam), (short)HIWORD(lParam));
+			shape->draw(bufferDc, x, y);
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
-		}
-		if (wParam & MK_CONTROL)
-		{
-			GetClientRect(hWnd, &rect);
-			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
-			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-			HANDLE oldPen = SelectObject(currentDc, pen);
-			DeleteObject(SelectObject(bufferDc, pen));
-			HANDLE oldBrush = SelectObject(currentDc, brush);
-			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
-			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-			DeleteObject(pen);
-			DeleteObject(oldPen);
-			DeleteObject(brush);
-			DeleteObject(oldBrush);
-
-			GetClientRect(hWnd, &rect);
-			INT diffX = (short)LOWORD(lParam) - prevMove.x;
-			INT diffY = (short)HIWORD(lParam) - prevMove.y;
-			BitBlt(currentDc, diffX, diffY, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
-			drawMode = BUFFER;
-			InvalidateRect(hWnd, &rect, FALSE);
 		}
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 		delete shape;
@@ -601,12 +555,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			shape = new CustomLine(prevX, prevY);
 			ReleaseCapture();
 			GetClientRect(hWnd, &rect);
+			InvalidateRect(hWnd, NULL, FALSE);
 			if (!isPolyLine)
 				shape->draw(bufferDc, startX, startY);
 			else
 				shape->draw(bufferDc, prevX, prevY);
 			drawMode = BUFFER;
-			InvalidateRect(hWnd, NULL, FALSE);
 			prevX = -1;
 			prevY = -1;
 			startX = -1;
@@ -614,11 +568,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			delete shape;
 			shape = NULL;
 		}
+		else if (wParam & MK_CONTROL)
+		{
+			delta = { 0, 0 };
+			zoom = DEFAULT_ZOOM;
+		}
 		break;
 
 	case WM_RBUTTONUP:
 		ReleaseCapture();
-		GetClientRect(hWnd, &rect);
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 		if (rubber)
 		{
@@ -634,22 +592,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (drawMode)
 		{
 		case CURRENT:
-			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
+			StretchBlt(paintDc, 0, 0, rect.right, rect.bottom, currentDc, -delta.x, -delta.y, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
 			break;
 
 		case BUFFER:
-			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			StretchBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, -delta.x, -delta.y, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
 			break;
 
 		case BACKUP:
 			undo(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
-			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			StretchBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, -delta.x, -delta.y, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
 			drawMode = CURRENT;
 			break;
 
 		case RESTORE:
 			restore(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
-			BitBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
+			StretchBlt(paintDc, 0, 0, rect.right, rect.bottom, bufferDc, -delta.x, -delta.y, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
 			drawMode = CURRENT;
 			break;
 		}
@@ -668,49 +626,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else if (wParam & MK_CONTROL)
 		{
-			if (!isScale)
-				isScale = true;
 			GetClientRect(hWnd, &rect);
 			if (GET_WHEEL_DELTA_WPARAM(wParam) < 0)
 			{
-				zoom *= DELTA;
+				zoom *= DELTA_ZOOM;
 			}
 			else
 			{
-				zoom /= DELTA;
+				zoom /= DELTA_ZOOM;
 			}
-			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
-			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-			HANDLE oldPen = SelectObject(currentDc, pen);
-			DeleteObject(SelectObject(bufferDc, pen));
-			HANDLE oldBrush = SelectObject(currentDc, brush);
-			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, rect.right+10, rect.bottom+10);
-			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-
-			StretchBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
-
-			pen = (HPEN)GetStockObject(BLACK_PEN);
-			brush = (HBRUSH)GetStockObject(NULL_BRUSH);
-			oldPen = SelectObject(currentDc, pen);
-			DeleteObject(SelectObject(bufferDc, pen));
-			oldBrush = SelectObject(currentDc, brush);
-			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, (int)(rect.right / zoom), (int)(rect.bottom / zoom));
-			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-			DeleteObject(pen);
-			DeleteObject(oldPen);
-			DeleteObject(brush);
-			DeleteObject(oldBrush);
-
-			drawMode = CURRENT;
-			InvalidateRect(hWnd, &rect, false);
+			drawMode = BUFFER;
+			InvalidateRect(hWnd, &rect, true);
 		}
 		else
 		{
@@ -721,86 +647,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			DeleteObject(SelectObject(currentDc, pen));
 			DeleteObject(SelectObject(bufferDc, pen));
 			GetClientRect(hWnd, &rect);
+			InvalidateRect(hWnd, NULL, FALSE);
 			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			MoveToEx(currentDc, prevCoord.x, prevCoord.y, NULL);
 			LineTo(currentDc, prevCoord.x, prevCoord.y);
 			drawMode = CURRENT;
-			InvalidateRect(hWnd, NULL, FALSE); 
 		}
 		break;
 
 	case WM_CHAR:
 		if (ToolId == 5)
 		{
-			
 			str += (TCHAR)wParam;
 			GetClientRect(hWnd, &rect);
+			InvalidateRect(hWnd, NULL, FALSE);
 			TextOut(bufferDc, prevX, prevY, str.data(), str.size());
 			drawMode = BUFFER;
-			InvalidateRect(hWnd, NULL, FALSE);
 		}
 		break;
 
-	case WM_KEYUP:
-		if (wParam & VK_CONTROL && isScale)
-		{	
-			GetClientRect(hWnd, &rect);
-			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
-			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-			HANDLE oldPen = SelectObject(currentDc, pen);
-			DeleteObject(SelectObject(bufferDc, pen));
-			HANDLE oldBrush = SelectObject(currentDc, brush);
-			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
-			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-			DeleteObject(pen);
-			DeleteObject(oldPen);
-			DeleteObject(brush);
-			DeleteObject(oldBrush);
+	case WM_ERASEBKGND:
+		GetClientRect(hWnd, &rect);
+		FillRect(mainDc, &rect, (HBRUSH)BLACK_BRUSH);
+		break;
 
-			isScale = false;
-			StretchBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, (int)(rect.right * zoom), (int)(rect.bottom * zoom), SRCCOPY);
-			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
-			zoom = DEFAULT_ZOOM;
-			drawMode = BUFFER;
-			InvalidateRect(hWnd, &rect, false);
-		}
-		if (wParam & VK_CONTROL && lPressed)
-		{
-			GetClientRect(hWnd, &rect);
-			HPEN pen = (HPEN)GetStockObject(NULL_PEN);
-			HBRUSH brush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-			HANDLE oldPen = SelectObject(currentDc, pen);
-			DeleteObject(SelectObject(bufferDc, pen));
-			HANDLE oldBrush = SelectObject(currentDc, brush);
-			DeleteObject(SelectObject(bufferDc, brush));
-			Rectangle(currentDc, 0, 0, rect.right + 10, rect.bottom + 10);
-			DeleteObject(SelectObject(currentDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(bufferDc, (HPEN)oldPen));
-			DeleteObject(SelectObject(currentDc, (HBRUSH)oldBrush));
-			DeleteObject(SelectObject(bufferDc, (HBRUSH)oldBrush));
-			DeleteObject(pen);
-			DeleteObject(oldPen);
-			DeleteObject(brush);
-			DeleteObject(oldBrush);
-
-			ToolId = NONE;
-			GetClientRect(hWnd, &rect);
-			INT diffX = newMove.x - prevMove.x;
-			INT diffY = newMove.y - prevMove.y;
-			BitBlt(currentDc, diffX, diffY, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
-			BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, currentDc, 0, 0, SRCCOPY);
-			drawMode = BUFFER;
-			InvalidateRect(hWnd, &rect, FALSE);
-		}
+	case WM_SIZE:
+		InvalidateRect(hWnd, &rect, FALSE);
+		drawMode = BUFFER;
 		break;
 
 	case WM_DESTROY:
 		ReleaseDC(hWnd, mainDc);
-        ReleaseDC(hWnd, currentDc);
+		ReleaseDC(hWnd, currentDc);
 		ReleaseDC(hWnd, bufferDc);
 		PostQuitMessage(0);
 		break;
