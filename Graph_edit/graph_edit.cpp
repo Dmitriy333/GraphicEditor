@@ -544,7 +544,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
 		}
-		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
+		if (!(wParam & MK_CONTROL))
+		{
+			createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
+		}
 		delete shape;
 		shape = NULL;
 		break;
@@ -672,7 +675,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_SIZE:
-		InvalidateRect(hWnd, &rect, FALSE);
+	case WM_MOVE:
+		InvalidateRect(hWnd, &rect, TRUE);
 		drawMode = BUFFER;
 		break;
 
