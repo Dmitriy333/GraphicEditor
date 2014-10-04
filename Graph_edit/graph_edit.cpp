@@ -211,7 +211,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				isFile = true;
 				GetObject(hBitmap, sizeof(BITMAP), &bm);
 				SelectObject(bufferDc, hBitmap);
-				BitBlt(hDC, 0, 0, bm.bmWidth, bm.bmHeight, bufferDc, 0, 0, SRCCOPY);
+				InvalidateRect(hWnd, &rect, TRUE);
 				DeleteDC(hMemDC);
 				ReleaseDC(hWnd, hDC);
 				DeleteObject(hBitmap);
@@ -414,6 +414,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		initializeBackup(hWnd, mainDc, backupDc);
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
 		restoreCount = 0;
+		DragAcceptFiles(hWnd, TRUE);
 		break;
 
 	case WM_LBUTTONDOWN:
@@ -676,14 +677,46 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_SIZE:
 	case WM_MOVE:
+		GetClientRect(hWnd, &rect);
 		InvalidateRect(hWnd, &rect, TRUE);
 		drawMode = BUFFER;
+		break;
+
+	case WM_DROPFILES:
+		HDROP hdrop;
+		hdrop = (HDROP)wParam;
+
+		if (DragQueryFile(hdrop, 0xFFFFFFFF, NULL, NULL) != 1){
+			MessageBox(NULL, _T("Dropping multiple files is not supported."), NULL, MB_ICONERROR);
+			DragFinish(hdrop);
+			break;
+		}
+		if (DragQueryFile(hdrop, 0, sfile, MAX_PATH))
+		{
+			HBITMAP hBitmap;
+			BITMAP bm;
+			HDC hDC;
+			HDC hMemDC;
+
+			hDC = GetDC(hWnd);
+			hMemDC = CreateCompatibleDC(hDC);
+			hBitmap = (HBITMAP)LoadImage(hInst, sfile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+			isFile = true;
+			GetObject(hBitmap, sizeof(BITMAP), &bm);
+			SelectObject(bufferDc, hBitmap);
+			InvalidateRect(hWnd, &rect, TRUE);
+			DeleteDC(hMemDC);
+			ReleaseDC(hWnd, hDC);
+			DeleteObject(hBitmap);
+		}
+		DragFinish(hdrop);
 		break;
 
 	case WM_DESTROY:
 		ReleaseDC(hWnd, mainDc);
 		ReleaseDC(hWnd, currentDc);
 		ReleaseDC(hWnd, bufferDc);
+		DragAcceptFiles(hWnd, FALSE);
 		PostQuitMessage(0);
 		break;
 
