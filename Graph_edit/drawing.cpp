@@ -4,12 +4,17 @@
 void  Drawing::initializeDcs(HWND &hWnd, HDC &mainDc, HDC &currentDc, HDC &bufferDc)
 {
 	static HBITMAP currentBitmap, bufferBitmap;
-	RECT rect;
+
 	HPEN pen;
 	HBRUSH brush;
 
+	if (initRect)
+	{
+		GetClientRect(hWnd, &rect);
+		initRect = FALSE;
+	}
+
 	mainDc = GetDC(hWnd);
-	GetClientRect(hWnd, &rect);
 
 	pen = (HPEN)GetStockObject(BLACK_PEN);
 	brush = (HBRUSH)GetStockObject(NULL_BRUSH);
@@ -42,10 +47,7 @@ void Drawing::useRubber(HWND &hWnd,
 	HDC &currentDc, HDC &bufferDc,
 	draw &drawMode)
 {
-	RECT rect;
 	HPEN pen;
-
-	GetClientRect(hWnd, &rect);
 
 	pen = CreatePen(PS_SOLID, CustomRubber::rubberWidth, CustomRubber::rubberColor);
 	DeleteObject(SelectObject(currentDc, pen));
@@ -73,9 +75,7 @@ void Drawing::initializeBackup(HWND &hWnd,
 		HDC (&backupDc)[BACKUPS]
 	)
 {
-	RECT rect;
 	HBITMAP backupBitmap[BACKUPS];
-	GetClientRect(hWnd, &rect);
 
 	for (int i = 0; i < BACKUPS; i++)
 	{
@@ -94,8 +94,6 @@ void Drawing::createBackup(HWND &hWnd,
 	HDC &bufferDc,
 	HDC (&backupDc)[BACKUPS])
 {
-	RECT rect;
-	GetClientRect(hWnd, &rect);
 	restoreCount = 0;
 
 	if (backupDepth < (BACKUPS-1))
@@ -121,8 +119,6 @@ void Drawing::undo(HWND hWnd,
 {
 	if (backupDepth > 0)
 	{
-		RECT rect;
-		GetClientRect(hWnd, &rect);
 		backupDepth--;
 		BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, backupDc[backupDepth], 0, 0, SRCCOPY);
 		restoreCount++;
@@ -137,8 +133,6 @@ void Drawing::restore(HWND hWnd,
 {
 	if (restoreCount > 0)
 	{
-		RECT rect;
-		GetClientRect(hWnd, &rect);
 		backupDepth++;
 		BitBlt(bufferDc, 0, 0, rect.right, rect.bottom, backupDc[backupDepth], 0, 0, SRCCOPY);
 		restoreCount--;

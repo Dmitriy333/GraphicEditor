@@ -2,6 +2,9 @@
 
 #include "figures.h"
 
+static RECT rect;
+static BOOL initRect = TRUE;
+
 namespace Drawing
 {
 	void initializeDcs(HWND &hWnd,

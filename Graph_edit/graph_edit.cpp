@@ -157,12 +157,10 @@ HBITMAP Create_hBitmap(HDC hDC, int w, int h)
 	return hbm;
 }
 
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 
 	PAINTSTRUCT ps;
-	RECT rect;
 	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0, backupDc[BACKUPS];
 	static INT backupDepth = -1, restoreCount = 0;
 	static draw drawMode;
@@ -221,8 +219,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_FILE_SAVE:
 			if (isFile)
 			{
-				RECT rect;
-				GetClientRect(hWnd, &rect);
 				CreateBMPFile(hWnd, sfile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(bufferDc, rect.right, rect.bottom)), Create_hBitmap(bufferDc, rect.right, rect.bottom), bufferDc);
 				break;
 			}
@@ -240,9 +236,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			if (GetSaveFileName(&ofn))
 			{
-				RECT rect;
-				GetClientRect(hWnd, &rect);
-
 				CreateBMPFile(hWnd, ofn.lpstrFile, CreateBitmapInfoStruct(hWnd, Create_hBitmap(bufferDc, rect.right, rect.bottom)), Create_hBitmap(bufferDc, rect.right, rect.bottom), bufferDc);
 				isFile = true;
 			}
@@ -302,6 +295,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case ID_FILE_UNDO:
 			drawMode = BACKUP;
 			InvalidateRect(hWnd, NULL, FALSE);
+			UpdateWindow(hWnd);
 			break;
 
 		case ID_FILE_RESTORE:
@@ -309,6 +303,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				drawMode = RESTORE;
 				InvalidateRect(hWnd, NULL, FALSE);
+				UpdateWindow(hWnd);
 			}
 			break;
 
@@ -410,6 +405,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_CREATE:
+		GetClientRect(hWnd, &rect);
 		initializeDcs(hWnd, mainDc, currentDc, bufferDc);
 		initializeBackup(hWnd, mainDc, backupDc);
 		createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
@@ -472,7 +468,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_RBUTTONDOWN:
 		x = (short)(LOWORD(lParam) * zoom) - delta.x;
 		y = (short)(HIWORD(lParam) * zoom) - delta.y;
-		GetClientRect(hWnd, &rect);
 		rubber = new CustomRubber(x, y);
 		useRubber(hWnd, rubber, x, y, currentDc, bufferDc, drawMode);
 		SetCapture(hWnd);
@@ -483,7 +478,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		y = (short)(HIWORD(lParam) * zoom) - delta.y;
 		prevCoord.x = x;
 		prevCoord.y = y;
-		GetClientRect(hWnd, &rect);
 		InvalidateRect(hWnd, NULL, FALSE);
 		if (wParam & MK_LBUTTON)
 		{
@@ -505,7 +499,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else
 				{
-					GetClientRect(hWnd, &rect);
 					BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 					shape->draw(currentDc, x, y);
 					drawMode = CURRENT;
@@ -521,7 +514,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else
 		{
-			GetClientRect(hWnd, &rect);
 			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			MoveToEx(currentDc, prevCoord.x, prevCoord.y, NULL);
 			LineTo(currentDc, prevCoord.x, prevCoord.y);
@@ -540,7 +532,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				prevX = x;
 				prevY = y;
 			}
-			GetClientRect(hWnd, &rect);
 			shape->draw(bufferDc, x, y);
 			drawMode = BUFFER;
 			InvalidateRect(hWnd, NULL, FALSE);
@@ -558,7 +549,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			shape = new CustomLine(prevX, prevY);
 			ReleaseCapture();
-			GetClientRect(hWnd, &rect);
 			InvalidateRect(hWnd, NULL, FALSE);
 			if (!isPolyLine)
 				shape->draw(bufferDc, startX, startY);
@@ -591,7 +581,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_PAINT:
 		paintDc = BeginPaint(hWnd, &ps);
-		GetClientRect(hWnd, &rect);
 
 		switch (drawMode)
 		{
@@ -625,12 +614,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			CustomRubber::rubberWidth += GET_WHEEL_DELTA_WPARAM(wParam) / 20;
 			if (CustomRubber::rubberWidth < 0)
 				CustomRubber::rubberWidth = 0;
-			GetClientRect(hWnd, &rect);
 			useRubber(hWnd, rubber, prevCoord.x, prevCoord.y, currentDc, bufferDc, drawMode);
 		}
 		else if (wParam & MK_CONTROL)
 		{
-			GetClientRect(hWnd, &rect);
 			if (GET_WHEEL_DELTA_WPARAM(wParam) < 0)
 			{
 				zoom *= DELTA_ZOOM;
@@ -650,7 +637,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
 			DeleteObject(SelectObject(bufferDc, pen));
-			GetClientRect(hWnd, &rect);
 			InvalidateRect(hWnd, NULL, FALSE);
 			BitBlt(currentDc, 0, 0, rect.right, rect.bottom, bufferDc, 0, 0, SRCCOPY);
 			MoveToEx(currentDc, prevCoord.x, prevCoord.y, NULL);
@@ -663,7 +649,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (ToolId == 5)
 		{
 			str += (TCHAR)wParam;
-			GetClientRect(hWnd, &rect);
 			InvalidateRect(hWnd, NULL, FALSE);
 			TextOut(bufferDc, prevX, prevY, str.data(), str.size());
 			drawMode = BUFFER;
@@ -671,13 +656,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_ERASEBKGND:
-		GetClientRect(hWnd, &rect);
 		FillRect(mainDc, &rect, (HBRUSH)BLACK_BRUSH);
 		break;
 
 	case WM_SIZE:
 	case WM_MOVE:
-		GetClientRect(hWnd, &rect);
 		InvalidateRect(hWnd, &rect, TRUE);
 		drawMode = BUFFER;
 		break;
