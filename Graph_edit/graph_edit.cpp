@@ -69,6 +69,28 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
+void SelectTool(HWND hWnd, int wmId)
+{
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_PEN, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_LINE, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_POLYLINE, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_POLYGONE, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_RECTANGLE, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_ELLIPSE, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_TOOLS_TEXT, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), wmId, MF_CHECKED);
+}
+
+void SelectStyle(HWND hWnd, int wmId){
+	CheckMenuItem(GetMenu(hWnd), ID_STYLE_SOLID, MF_UNCHECKED);	
+	CheckMenuItem(GetMenu(hWnd), ID_STYLE_DASH, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_STYLE_DOT, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_STYLE_DASH_DOT, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_STYLE_DASH_DOT_DOT, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), ID_STYLE_NONE, MF_UNCHECKED);
+	CheckMenuItem(GetMenu(hWnd), wmId, MF_CHECKED);
+}
+
 // Saving functions
 PBITMAPINFO CreateBitmapInfoStruct(HWND hwnd, HBITMAP hBmp)
 {
@@ -163,6 +185,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	static HDC mainDc, paintDc, currentDc = 0, bufferDc = 0, backupDc[BACKUPS];
 	static INT backupDepth = -1, restoreCount = 0;
+	static boolean initCheck;
 	static draw drawMode;
 	static CustomShape* shape = NULL;
 	static CustomRubber* rubber = NULL;
@@ -181,7 +204,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static BOOL isFile = false;
 	static DOUBLE zoom = DEFAULT_ZOOM;
 	static INT x, y;
-
+	if (!initCheck){
+		SelectStyle(hWnd, ID_STYLE_SOLID);
+		SelectTool(hWnd, ID_TOOLS_PEN);
+		initCheck = true;
+	}
+	
 	switch (message)
 	{
 	case WM_COMMAND:
@@ -242,22 +270,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_TOOLS_PEN:
+			SelectTool(hWnd, ID_TOOLS_PEN);
 			ToolId = PEN;
 			break;
 
 		case ID_TOOLS_LINE:
+			SelectTool(hWnd, ID_TOOLS_LINE);
 			ToolId = LINE;
 			break;
 
 		case ID_TOOLS_RECTANGLE:
+			SelectTool(hWnd, ID_TOOLS_RECTANGLE);
 			ToolId = RECTANGLE;
 			break;
 
 		case ID_TOOLS_ELLIPSE:
+			SelectTool(hWnd, ID_TOOLS_ELLIPSE);
 			ToolId = ELLIPSE;
 			break;
 
 		case ID_TOOLS_POLYGONE:
+			SelectTool(hWnd, ID_TOOLS_POLYGONE);
 			isPolyLine = FALSE;
 			prevX = -1;
 			prevY = -1;
@@ -265,6 +298,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_TOOLS_POLYLINE:
+			SelectTool(hWnd, ID_TOOLS_POLYLINE);
 			isPolyLine = TRUE;
 			prevX = -1;
 			prevY = -1;
@@ -272,9 +306,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_FILE_NEW:
+			initCheck = false;
 			initializeDcs(hWnd, mainDc, currentDc, bufferDc);
 			initializeBackup(hWnd, mainDc, backupDc);
 			createBackup(hWnd, backupDepth, restoreCount, bufferDc, backupDc);
+			SelectTool(hWnd, ID_TOOLS_PEN);
 			restoreCount = 0;
 			CustomShape::penColor = RGB(0, 0, 0);
 			CustomShape::penStyle = PS_SOLID;
@@ -328,6 +364,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_STYLE_SOLID:
+			SelectStyle(hWnd, ID_STYLE_SOLID);
 			CustomShape::penStyle = PS_SOLID;
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
@@ -335,6 +372,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_STYLE_DASH:
+			SelectStyle(hWnd, ID_STYLE_DASH);
 			CustomShape::penStyle = PS_DASH;
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
@@ -342,6 +380,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_STYLE_DOT:
+			SelectStyle(hWnd, ID_STYLE_DOT);
 			CustomShape::penStyle = PS_DOT;
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
@@ -349,6 +388,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_STYLE_DASH_DOT:
+			SelectStyle(hWnd, ID_STYLE_DASH_DOT);
 			CustomShape::penStyle = PS_DASHDOT;
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
@@ -356,6 +396,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_STYLE_DASH_DOT_DOT:
+			SelectStyle(hWnd, ID_STYLE_DASH_DOT_DOT);
 			CustomShape::penStyle = PS_DASHDOTDOT;
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
@@ -363,6 +404,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case ID_STYLE_NONE:
+			SelectStyle(hWnd, ID_STYLE_DEFAULT);
 			CustomShape::penStyle = PS_NULL;
 			pen = CreatePen(CustomShape::penStyle, CustomShape::penWidth, CustomShape::penColor);
 			DeleteObject(SelectObject(currentDc, pen));
